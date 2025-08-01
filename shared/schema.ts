@@ -33,8 +33,28 @@ export const users = pgTable("users", {
   profileImageUrl: varchar("profile_image_url"),
   role: varchar("role").notNull().default('employee'), // 'employee' or 'admin'
   department: varchar("department"),
+  position: varchar("position"),
+  phone: varchar("phone"),
+  hireDate: timestamp("hire_date"),
+  isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Employee invitations table for pre-registering employees
+export const employeeInvitations = pgTable("employee_invitations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  email: varchar("email").unique().notNull(),
+  firstName: varchar("first_name").notNull(),
+  lastName: varchar("last_name").notNull(),
+  role: varchar("role").notNull().default('employee'),
+  department: varchar("department"),
+  position: varchar("position"),
+  phone: varchar("phone"),
+  hireDate: timestamp("hire_date"),
+  invitedBy: varchar("invited_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  expiresAt: timestamp("expires_at"),
 });
 
 // Attendance status enum
@@ -73,6 +93,9 @@ export const workLocations = pgTable("work_locations", {
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
 
+export type InsertEmployeeInvitation = typeof employeeInvitations.$inferInsert;
+export type EmployeeInvitation = typeof employeeInvitations.$inferSelect;
+
 export type InsertAttendanceRecord = typeof attendanceRecords.$inferInsert;
 export type AttendanceRecord = typeof attendanceRecords.$inferSelect;
 
@@ -80,6 +103,18 @@ export type InsertWorkLocation = typeof workLocations.$inferInsert;
 export type WorkLocation = typeof workLocations.$inferSelect;
 
 // Zod schemas
+export const insertUserSchema = createInsertSchema(users).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertEmployeeInvitationSchema = createInsertSchema(employeeInvitations).omit({
+  id: true,
+  createdAt: true,
+  expiresAt: true,
+});
+
 export const insertAttendanceRecordSchema = createInsertSchema(attendanceRecords).omit({
   id: true,
   createdAt: true,
@@ -91,5 +126,7 @@ export const insertWorkLocationSchema = createInsertSchema(workLocations).omit({
   createdAt: true,
 });
 
+export type InsertUserType = z.infer<typeof insertUserSchema>;
+export type InsertEmployeeInvitationType = z.infer<typeof insertEmployeeInvitationSchema>;
 export type InsertAttendanceRecordType = z.infer<typeof insertAttendanceRecordSchema>;
 export type InsertWorkLocationType = z.infer<typeof insertWorkLocationSchema>;

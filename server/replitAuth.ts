@@ -57,13 +57,44 @@ function updateUserSession(
 async function upsertUser(
   claims: any,
 ) {
+  const email = claims["email"];
+  
+  // Check if user already exists
+  const existingUser = await storage.getUserByEmail(email);
+  if (existingUser) {
+    // Update existing user
+    await storage.upsertUser({
+      id: claims["sub"],
+      email: claims["email"],
+      firstName: claims["first_name"],
+      lastName: claims["last_name"],
+      profileImageUrl: claims["profile_image_url"],
+    });
+    return;
+  }
+  
+  // Check if user has an invitation
+  const invitation = await storage.getEmployeeInvitationByEmail(email);
+  if (!invitation) {
+    throw new Error("User not authorized. Please contact your administrator.");
+  }
+  
+  // Create user from invitation
   await storage.upsertUser({
     id: claims["sub"],
-    email: claims["email"],
-    firstName: claims["first_name"],
-    lastName: claims["last_name"],
+    email: invitation.email,
+    firstName: invitation.firstName,
+    lastName: invitation.lastName,
     profileImageUrl: claims["profile_image_url"],
+    role: invitation.role,
+    department: invitation.department,
+    position: invitation.position,
+    phone: invitation.phone,
+    hireDate: invitation.hireDate,
   });
+  
+  // Remove the invitation after successful registration
+  await storage.deleteEmployeeInvitation(invitation.id);
 }
 
 export async function setupAuth(app: Express) {

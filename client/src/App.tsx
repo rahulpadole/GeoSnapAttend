@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import Login from "@/pages/login";
+import Profile from "@/pages/profile";
 import EmployeeDashboard from "@/pages/employee-dashboard";
 import AdminDashboard from "@/pages/admin-dashboard";
 
@@ -33,6 +34,7 @@ function Router() {
           <Route path="/">
             {user?.role === 'admin' ? <AdminDashboard /> : <EmployeeDashboard />}
           </Route>
+          <Route path="/profile" component={Profile} />
           <Route path="/employee" component={EmployeeDashboard} />
           <Route path="/admin" component={AdminDashboard} />
         </>

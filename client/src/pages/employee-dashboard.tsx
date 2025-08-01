@@ -5,7 +5,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Clock, MapPin, Camera, CheckCircle, User, LogOut } from "lucide-react";
+import { Clock, MapPin, Camera, CheckCircle, User, LogOut, Settings } from "lucide-react";
+import { Link } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import CameraCapture from "@/components/camera-capture";
@@ -143,6 +144,12 @@ export default function EmployeeDashboard() {
               <h1 className="font-semibold text-lg">AttendanceTracker</h1>
             </div>
             <div className="flex items-center space-x-4">
+              <Link href="/profile">
+                <Button variant="outline" size="sm">
+                  <Settings className="h-4 w-4 mr-2" />
+                  Profile
+                </Button>
+              </Link>
               <div className="flex items-center space-x-2">
                 {user.profileImageUrl ? (
                   <img 

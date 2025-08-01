@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -14,9 +14,14 @@ import {
   LogOut,
   Download,
   BarChart3,
-  Eye
+  Eye,
+  UserPlus,
+  Settings,
+  User
 } from "lucide-react";
+import { Link } from "wouter";
 import { isUnauthorizedError } from "@/lib/authUtils";
+import AddEmployeeModal from "@/components/add-employee-modal";
 
 interface AttendanceStats {
   totalEmployees: number;
@@ -46,6 +51,7 @@ interface AttendanceWithUser {
 export default function AdminDashboard() {
   const { user, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
+  const [showAddEmployeeModal, setShowAddEmployeeModal] = useState(false);
 
   // Fetch attendance statistics
   const { data: stats, isLoading: statsLoading } = useQuery<AttendanceStats>({
@@ -122,6 +128,20 @@ export default function AdminDashboard() {
               <h1 className="font-semibold text-lg">Admin Dashboard</h1>
             </div>
             <div className="flex items-center space-x-4">
+              <Button 
+                onClick={() => setShowAddEmployeeModal(true)}
+                size="sm"
+                className="bg-primary hover:bg-primary/90"
+              >
+                <UserPlus className="h-4 w-4 mr-2" />
+                Add Employee
+              </Button>
+              <Link href="/profile">
+                <Button variant="outline" size="sm">
+                  <Settings className="h-4 w-4 mr-2" />
+                  Profile
+                </Button>
+              </Link>
               <div className="flex items-center space-x-2">
                 {user.profileImageUrl ? (
                   <img 
@@ -131,7 +151,7 @@ export default function AdminDashboard() {
                   />
                 ) : (
                   <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
-                    <Users className="h-4 w-4 text-gray-500" />
+                    <User className="h-4 w-4 text-gray-500" />
                   </div>
                 )}
                 <span className="text-sm font-medium">
@@ -357,6 +377,12 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
       </main>
+
+      {/* Add Employee Modal */}
+      <AddEmployeeModal 
+        open={showAddEmployeeModal}
+        onOpenChange={setShowAddEmployeeModal}
+      />
     </div>
   );
 }

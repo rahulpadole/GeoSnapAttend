@@ -1,9 +1,12 @@
 import {
   users,
+  employeeInvitations,
   attendanceRecords,
   workLocations,
   type User,
   type UpsertUser,
+  type EmployeeInvitation,
+  type InsertEmployeeInvitation,
   type AttendanceRecord,
   type InsertAttendanceRecord,
   type WorkLocation,
@@ -15,7 +18,16 @@ import { eq, desc, and, gte, lte, sql } from "drizzle-orm";
 export interface IStorage {
   // User operations (mandatory for Replit Auth)
   getUser(id: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
+  getAllUsers(): Promise<User[]>;
+  updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
+  
+  // Employee invitation operations
+  createEmployeeInvitation(invitation: InsertEmployeeInvitation): Promise<EmployeeInvitation>;
+  getEmployeeInvitations(): Promise<EmployeeInvitation[]>;
+  getEmployeeInvitationByEmail(email: string): Promise<EmployeeInvitation | undefined>;
+  deleteEmployeeInvitation(id: string): Promise<void>;
   
   // Attendance operations
   createAttendanceRecord(record: InsertAttendanceRecord): Promise<AttendanceRecord>;
@@ -46,6 +58,11 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user;
+  }
+
   async upsertUser(userData: UpsertUser): Promise<User> {
     const [user] = await db
       .insert(users)
@@ -59,6 +76,47 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
     return user;
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return await db.select().from(users).where(eq(users.isActive, true));
+  }
+
+  async updateUser(id: string, updates: Partial<User>): Promise<User | undefined> {
+    const [user] = await db
+      .update(users)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning();
+    return user;
+  }
+
+  // Employee invitation operations
+  async createEmployeeInvitation(invitation: InsertEmployeeInvitation): Promise<EmployeeInvitation> {
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7); // Expires in 7 days
+    
+    const [created] = await db
+      .insert(employeeInvitations)
+      .values({ ...invitation, expiresAt })
+      .returning();
+    return created;
+  }
+
+  async getEmployeeInvitations(): Promise<EmployeeInvitation[]> {
+    return await db.select().from(employeeInvitations);
+  }
+
+  async getEmployeeInvitationByEmail(email: string): Promise<EmployeeInvitation | undefined> {
+    const [invitation] = await db
+      .select()
+      .from(employeeInvitations)
+      .where(eq(employeeInvitations.email, email));
+    return invitation;
+  }
+
+  async deleteEmployeeInvitation(id: string): Promise<void> {
+    await db.delete(employeeInvitations).where(eq(employeeInvitations.id, id));
   }
 
   // Attendance operations
