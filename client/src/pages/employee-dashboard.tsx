@@ -29,13 +29,13 @@ export default function EmployeeDashboard() {
   const [location, setLocation] = useState<{ lat: number; lng: number; address?: string } | null>(null);
 
   // Fetch today's attendance
-  const { data: todayAttendance, isLoading: attendanceLoading } = useQuery({
+  const { data: todayAttendance, isLoading: attendanceLoading } = useQuery<AttendanceRecord>({
     queryKey: ["/api/attendance/today"],
     retry: false,
   });
 
   // Fetch attendance history
-  const { data: attendanceHistory } = useQuery({
+  const { data: attendanceHistory } = useQuery<AttendanceRecord[]>({
     queryKey: ["/api/attendance/history"],
     retry: false,
   });

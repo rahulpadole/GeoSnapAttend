@@ -12,6 +12,7 @@ export default function CameraCapture({ onCapture, disabled, isLoading }: Camera
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [isCapturing, setIsCapturing] = useState(false);
   const [photoTaken, setPhotoTaken] = useState(false);
+  const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -56,16 +57,23 @@ export default function CameraCapture({ onCapture, disabled, isLoading }: Camera
       if (context) {
         context.drawImage(video, 0, 0);
         const photoData = canvas.toDataURL('image/jpeg', 0.8);
+        setCapturedPhoto(photoData);
         setPhotoTaken(true);
         stopCamera();
-        onCapture(photoData);
       }
     }
   };
 
   const retakePhoto = () => {
     setPhotoTaken(false);
+    setCapturedPhoto(null);
     startCamera();
+  };
+
+  const handleSubmit = () => {
+    if (capturedPhoto) {
+      onCapture(capturedPhoto);
+    }
   };
 
   return (
@@ -100,7 +108,7 @@ export default function CameraCapture({ onCapture, disabled, isLoading }: Camera
         </Button>
       )}
 
-      {photoTaken && (
+      {photoTaken && capturedPhoto && (
         <div className="space-y-4">
           <div className="flex items-center justify-center p-4 bg-secondary/10 rounded-lg">
             <CheckCircle className="h-5 w-5 text-secondary mr-2" />
@@ -116,7 +124,7 @@ export default function CameraCapture({ onCapture, disabled, isLoading }: Camera
               Retake Photo
             </Button>
             <Button 
-              onClick={() => onCapture('')}
+              onClick={handleSubmit}
               disabled={isLoading}
               className="flex-1 bg-secondary hover:bg-secondary/90"
             >
