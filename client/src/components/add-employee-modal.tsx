@@ -11,11 +11,11 @@ import { isUnauthorizedError } from "@/lib/authUtils";
 import { UserPlus, Mail, User, Building, Briefcase, Phone, Calendar } from "lucide-react";
 
 interface AddEmployeeModalProps {
-  isOpen: boolean;
-  onClose: () => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
-export default function AddEmployeeModal({ isOpen, onClose }: AddEmployeeModalProps) {
+export default function AddEmployeeModal({ open, onOpenChange }: AddEmployeeModalProps) {
   const [formData, setFormData] = useState({
     email: "",
     firstName: "",
@@ -32,7 +32,7 @@ export default function AddEmployeeModal({ isOpen, onClose }: AddEmployeeModalPr
 
   const createInvitationMutation = useMutation({
     mutationFn: async (data: any) => {
-      return await apiRequest("/api/admin/employees/invite", "POST", data);
+      return await apiRequest("POST", "/api/admin/employees/invite", data);
     },
     onSuccess: () => {
       toast({
@@ -42,7 +42,7 @@ export default function AddEmployeeModal({ isOpen, onClose }: AddEmployeeModalPr
       queryClient.invalidateQueries({ queryKey: ["/api/admin/employees/invitations"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/employees"] });
       resetForm();
-      onClose();
+      onOpenChange(false);
     },
     onError: (error) => {
       if (isUnauthorizedError(error)) {
@@ -80,6 +80,27 @@ export default function AddEmployeeModal({ isOpen, onClose }: AddEmployeeModalPr
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Validate required fields
+    if (!formData.email || !formData.firstName || !formData.lastName) {
+      toast({
+        title: "Validation Error",
+        description: "Email, first name, and last name are required.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      toast({
+        title: "Invalid Email",
+        description: "Please enter a valid email address.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     const submissionData = {
       ...formData,
       hireDate: formData.hireDate ? new Date(formData.hireDate).toISOString() : null,
@@ -90,11 +111,11 @@ export default function AddEmployeeModal({ isOpen, onClose }: AddEmployeeModalPr
 
   const handleClose = () => {
     resetForm();
-    onClose();
+    onOpenChange(false);
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <div className="flex items-center justify-center mb-4">

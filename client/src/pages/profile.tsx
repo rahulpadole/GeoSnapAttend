@@ -56,7 +56,7 @@ export default function Profile() {
 
   const updateProfileMutation = useMutation({
     mutationFn: async (updates: any) => {
-      return await apiRequest("/api/profile", "PUT", updates);
+      return await apiRequest("PUT", "/api/profile", updates);
     },
     onSuccess: () => {
       toast({
@@ -89,6 +89,15 @@ export default function Profile() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    // Validate required fields
+    if (!formData.firstName || !formData.lastName) {
+      toast({
+        title: "Validation Error",
+        description: "First name and last name are required.",
+        variant: "destructive",
+      });
+      return;
+    }
     updateProfileMutation.mutate(formData);
   };
 
