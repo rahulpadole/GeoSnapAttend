@@ -1,11 +1,9 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Clock, MapPin, Camera, Shield } from "lucide-react";
+import { Clock, MapPin, Camera, Shield, ArrowRight } from "lucide-react";
+import { Link } from "wouter";
 
 export default function Landing() {
-  const handleLogin = () => {
-    window.location.href = "/api/login";
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/10 to-secondary/10 flex items-center justify-center p-4">
@@ -37,12 +35,12 @@ export default function Landing() {
               </div>
             </div>
 
-            <Button 
-              onClick={handleLogin}
-              className="w-full bg-primary hover:bg-primary/90 text-white py-3 text-lg"
-            >
-              Sign In to Continue
-            </Button>
+            <Link href="/login">
+              <Button className="w-full bg-primary hover:bg-primary/90 text-white py-3 text-lg">
+                Get Started
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+            </Link>
           </CardContent>
         </Card>
       </div>

@@ -17,6 +17,7 @@ interface CheckoutModalProps {
 export default function CheckoutModal({ isOpen, onClose, location }: CheckoutModalProps) {
   const [photo, setPhoto] = useState<string | null>(null);
   const [isCapturing, setIsCapturing] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -83,6 +84,7 @@ export default function CheckoutModal({ isOpen, onClose, location }: CheckoutMod
         context.drawImage(video, 0, 0);
         const photoData = canvas.toDataURL('image/jpeg', 0.8);
         setPhoto(photoData);
+        setShowPreview(true);
       }
       
       // Stop camera
@@ -97,6 +99,15 @@ export default function CheckoutModal({ isOpen, onClose, location }: CheckoutMod
       });
       setIsCapturing(false);
     }
+  };
+
+  const confirmPhoto = () => {
+    setShowPreview(false);
+  };
+
+  const discardPhoto = () => {
+    setPhoto(null);
+    setShowPreview(false);
   };
 
   const handleCheckout = () => {
@@ -155,8 +166,8 @@ export default function CheckoutModal({ isOpen, onClose, location }: CheckoutMod
           <div className="border border-gray-200 rounded-lg p-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm font-medium">Identity Verification</span>
-              <Badge variant={photo ? "default" : "secondary"}>
-                {photo ? "Completed" : "Required"}
+              <Badge variant={photo && !showPreview ? "default" : "secondary"}>
+                {photo && !showPreview ? "Completed" : "Required"}
               </Badge>
             </div>
             
@@ -177,10 +188,48 @@ export default function CheckoutModal({ isOpen, onClose, location }: CheckoutMod
                   {isCapturing ? 'Capturing...' : 'Capture Photo'}
                 </Button>
               </div>
+            ) : showPreview ? (
+              <div className="space-y-3">
+                <div className="relative">
+                  <img
+                    src={photo}
+                    alt="Photo preview"
+                    className="w-full h-32 object-cover rounded-lg bg-gray-200"
+                  />
+                  <div className="absolute top-2 left-2 bg-black/50 text-white px-2 py-1 rounded text-xs">
+                    Preview
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <Button 
+                    onClick={discardPhoto}
+                    variant="outline" 
+                    className="flex-1"
+                  >
+                    Retake
+                  </Button>
+                  <Button 
+                    onClick={confirmPhoto}
+                    className="flex-1 bg-secondary hover:bg-secondary/90"
+                  >
+                    Use This Photo
+                  </Button>
+                </div>
+              </div>
             ) : (
               <div className="space-y-3">
-                <div className="flex items-center justify-center p-4 bg-secondary/10 rounded-lg">
-                  <CheckCircle className="h-5 w-5 text-secondary mr-2" />
+                <div className="relative">
+                  <img
+                    src={photo}
+                    alt="Captured photo"
+                    className="w-full h-20 object-cover rounded-lg bg-gray-200"
+                  />
+                  <div className="absolute top-1 left-1 bg-secondary/90 text-white px-1.5 py-0.5 rounded text-xs">
+                    ✓ Ready
+                  </div>
+                </div>
+                <div className="flex items-center justify-center p-3 bg-secondary/10 rounded-lg">
+                  <CheckCircle className="h-4 w-4 text-secondary mr-2" />
                   <span className="text-secondary font-medium text-sm">Photo captured!</span>
                 </div>
                 <Button 

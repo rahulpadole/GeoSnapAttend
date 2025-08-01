@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Camera, CheckCircle } from "lucide-react";
+import { Camera, CheckCircle, RotateCcw } from "lucide-react";
 
 interface CameraCaptureProps {
   onCapture: (photoData: string) => void;
@@ -13,8 +13,10 @@ export default function CameraCapture({ onCapture, disabled, isLoading }: Camera
   const [isCapturing, setIsCapturing] = useState(false);
   const [photoTaken, setPhotoTaken] = useState(false);
   const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const previewRef = useRef<HTMLImageElement>(null);
 
   const startCamera = async () => {
     try {
@@ -58,15 +60,28 @@ export default function CameraCapture({ onCapture, disabled, isLoading }: Camera
         context.drawImage(video, 0, 0);
         const photoData = canvas.toDataURL('image/jpeg', 0.8);
         setCapturedPhoto(photoData);
-        setPhotoTaken(true);
-        stopCamera();
+        setShowPreview(true);
+        // Don't stop camera yet - let user preview first
       }
     }
+  };
+
+  const confirmPhoto = () => {
+    setPhotoTaken(true);
+    setShowPreview(false);
+    stopCamera();
+  };
+
+  const discardPhoto = () => {
+    setCapturedPhoto(null);
+    setShowPreview(false);
+    // Keep camera running for another shot
   };
 
   const retakePhoto = () => {
     setPhotoTaken(false);
     setCapturedPhoto(null);
+    setShowPreview(false);
     startCamera();
   };
 
@@ -78,7 +93,7 @@ export default function CameraCapture({ onCapture, disabled, isLoading }: Camera
 
   return (
     <div className="space-y-4">
-      {isCapturing && (
+      {isCapturing && !showPreview && (
         <div className="relative">
           <video
             ref={videoRef}
@@ -95,9 +110,44 @@ export default function CameraCapture({ onCapture, disabled, isLoading }: Camera
         </div>
       )}
 
+      {/* Photo Preview */}
+      {showPreview && capturedPhoto && (
+        <div className="space-y-4">
+          <div className="relative">
+            <img
+              ref={previewRef}
+              src={capturedPhoto}
+              alt="Photo preview"
+              className="w-full h-48 object-cover rounded-lg bg-gray-200"
+            />
+            <div className="absolute top-2 left-2 bg-black/50 text-white px-2 py-1 rounded text-xs">
+              Preview
+            </div>
+          </div>
+          
+          <div className="flex gap-3">
+            <Button 
+              onClick={discardPhoto}
+              variant="outline" 
+              className="flex-1"
+            >
+              <RotateCcw className="mr-2 h-4 w-4" />
+              Retake
+            </Button>
+            <Button 
+              onClick={confirmPhoto}
+              className="flex-1 bg-secondary hover:bg-secondary/90"
+            >
+              <CheckCircle className="mr-2 h-4 w-4" />
+              Use This Photo
+            </Button>
+          </div>
+        </div>
+      )}
+
       <canvas ref={canvasRef} className="hidden" />
 
-      {!isCapturing && !photoTaken && (
+      {!isCapturing && !photoTaken && !showPreview && (
         <Button 
           onClick={startCamera}
           disabled={disabled}
@@ -108,8 +158,20 @@ export default function CameraCapture({ onCapture, disabled, isLoading }: Camera
         </Button>
       )}
 
-      {photoTaken && capturedPhoto && (
+      {photoTaken && capturedPhoto && !showPreview && (
         <div className="space-y-4">
+          {/* Final photo preview */}
+          <div className="relative">
+            <img
+              src={capturedPhoto}
+              alt="Captured photo"
+              className="w-full h-32 object-cover rounded-lg bg-gray-200"
+            />
+            <div className="absolute top-2 left-2 bg-secondary/90 text-white px-2 py-1 rounded text-xs">
+              ✓ Ready
+            </div>
+          </div>
+          
           <div className="flex items-center justify-center p-4 bg-secondary/10 rounded-lg">
             <CheckCircle className="h-5 w-5 text-secondary mr-2" />
             <span className="text-secondary font-medium">Photo captured successfully!</span>
