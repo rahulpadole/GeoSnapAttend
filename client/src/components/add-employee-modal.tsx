@@ -13,9 +13,10 @@ import { UserPlus, Mail, User, Building, Briefcase, Phone, Calendar } from "luci
 interface AddEmployeeModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onEmployeeAdded?: () => void;
 }
 
-export default function AddEmployeeModal({ open, onOpenChange }: AddEmployeeModalProps) {
+export default function AddEmployeeModal({ open, onOpenChange, onEmployeeAdded }: AddEmployeeModalProps) {
   const [formData, setFormData] = useState({
     email: "",
     firstName: "",
@@ -79,7 +80,7 @@ export default function AddEmployeeModal({ open, onOpenChange }: AddEmployeeModa
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validate required fields
     if (!formData.email || !formData.firstName || !formData.lastName) {
       toast({
@@ -100,7 +101,7 @@ export default function AddEmployeeModal({ open, onOpenChange }: AddEmployeeModa
       });
       return;
     }
-    
+
     const submissionData = {
       ...formData,
       hireDate: formData.hireDate ? new Date(formData.hireDate).toISOString() : null,
@@ -134,7 +135,7 @@ export default function AddEmployeeModal({ open, onOpenChange }: AddEmployeeModa
               <User className="h-5 w-5 mr-2" />
               Basic Information
             </h3>
-            
+
             <div className="grid md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="firstName">First Name *</Label>

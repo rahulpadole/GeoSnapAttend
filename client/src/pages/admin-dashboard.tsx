@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -52,18 +52,23 @@ interface AttendanceWithUser {
 export default function AdminDashboard() {
   const { user, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [showAddEmployeeModal, setShowAddEmployeeModal] = useState(false);
 
-  // Fetch attendance statistics
+  // Fetch attendance statistics with auto-refresh every 30 seconds
   const { data: stats, isLoading: statsLoading } = useQuery<AttendanceStats>({
     queryKey: ["/api/admin/stats"],
     retry: false,
+    refetchInterval: 30000, // Refresh every 30 seconds
+    refetchIntervalInBackground: false,
   });
 
-  // Fetch all attendance records
+  // Fetch all attendance records with auto-refresh every 30 seconds
   const { data: attendanceRecords, isLoading: recordsLoading } = useQuery<AttendanceWithUser[]>({
     queryKey: ["/api/admin/attendance/all"],
     retry: false,
+    refetchInterval: 30000, // Refresh every 30 seconds
+    refetchIntervalInBackground: false,
   });
 
   const handleLogout = () => {
@@ -84,6 +89,21 @@ export default function AdminDashboard() {
       description: "Generating comprehensive attendance report.",
     });
     // TODO: Implement report generation
+  };
+
+  const handleRefreshData = () => {
+    queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/admin/attendance/all"] });
+    toast({
+      title: "Data Refreshed",
+      description: "Dashboard data has been updated.",
+    });
+  };
+
+  const handleEmployeeAdded = () => {
+    // Refresh data when a new employee is added
+    queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/admin/attendance/all"] });
   };
 
   // Redirect if not authenticated or not admin
@@ -275,6 +295,14 @@ export default function AdminDashboard() {
                   <BarChart3 className="mr-2 h-4 w-4" />
                   Generate Report
                 </Button>
+                <Button 
+                  onClick={handleRefreshData}
+                  variant="outline"
+                  className="border-primary text-primary hover:bg-primary hover:text-white"
+                >
+                  <Clock className="mr-2 h-4 w-4" />
+                  Refresh
+                </Button>
               </div>
             </div>
           </CardContent>
@@ -383,6 +411,7 @@ export default function AdminDashboard() {
       <AddEmployeeModal 
         open={showAddEmployeeModal}
         onOpenChange={setShowAddEmployeeModal}
+        onEmployeeAdded={handleEmployeeAdded}
       />
     </div>
   );
