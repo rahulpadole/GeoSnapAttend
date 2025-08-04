@@ -1,14 +1,14 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-import WebSocket from "ws";
+import { WebSocketServer } from "ws"; // Import WebSocketServer from ws
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
 // Setup WebSocket Server
-const wss = new WebSocket.Server({ noServer: true });
+const wss = new WebSocketServer({ noServer: true });
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -86,7 +86,7 @@ app.use((req, res, next) => {
   server.listen(
     {
       port,
-      host: "0.0.0.0",
+      host: "0.0.0.0", // Use 0.0.0.0 to allow external access
       reusePort: true,
     },
     () => {

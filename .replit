@@ -12,12 +12,13 @@ run = ["npm", "run", "start"]
 
 [[ports]]
 localPort = 5000
+externalPort = 80
 
 [env]
 PORT = "5000"
 
 [workflows]
-runButton = "Start application"
+runButton = "Project"
 
 [[workflows.workflow]]
 name = "Project"
@@ -31,6 +32,22 @@ args = "Start application"
 [[workflows.workflow]]
 name = "Start application"
 author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm audit"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm audit fix"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm audit fix --force"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm fund"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
