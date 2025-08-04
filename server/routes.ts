@@ -276,6 +276,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   );
 
+  app.delete(
+    "/api/admin/employees/clear-all",
+    isAuthenticated,
+    async (req: any, res) => {
+      try {
+        const user = await storage.getUser(req.user.claims.sub);
+        if (user?.role !== "admin")
+          return res.status(403).json({ message: "Access denied" });
+
+        await storage.clearAllEmployeeData();
+        res.json({ message: "All employee data cleared successfully" });
+      } catch (error) {
+        console.error("Error clearing employee data:", error);
+        res.status(500).json({ message: "Failed to clear employee data" });
+      }
+    },
+  );
+
   app.get("/api/locations", isAuthenticated, async (req: any, res) => {
     try {
       const locations = await storage.getWorkLocations();

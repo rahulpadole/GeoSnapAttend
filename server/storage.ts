@@ -213,6 +213,17 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Admin statistics
+  async clearAllEmployeeData(): Promise<void> {
+    // Delete all attendance records
+    await db.delete(attendanceRecords);
+    
+    // Delete all employee invitations
+    await db.delete(employeeInvitations);
+    
+    // Delete all users except keep admin users
+    await db.delete(users).where(eq(users.role, 'employee'));
+  },
+
   async getAttendanceStats(): Promise<{
     totalEmployees: number;
     presentToday: number;

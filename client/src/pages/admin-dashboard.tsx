@@ -17,7 +17,8 @@ import {
   Eye,
   UserPlus,
   Settings,
-  User
+  User,
+  Trash2
 } from "lucide-react";
 import { Link } from "wouter";
 import { isUnauthorizedError } from "@/lib/authUtils";
@@ -251,14 +252,14 @@ export default function AdminDashboard() {
                   <option>Sales</option>
                   <option>HR</option>
                 </select>
-                
+
                 <select className="px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
                   <option>Today</option>
                   <option>This Week</option>
                   <option>This Month</option>
                 </select>
               </div>
-              
+
               <div className="flex gap-3">
                 <Button 
                   onClick={handleExport}
