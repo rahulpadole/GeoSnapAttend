@@ -222,7 +222,7 @@ export class DatabaseStorage implements IStorage {
     
     // Delete all users except keep admin users
     await db.delete(users).where(eq(users.role, 'employee'));
-  },
+  }
 
   async getAttendanceStats(): Promise<{
     totalEmployees: number;
