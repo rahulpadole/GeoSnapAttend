@@ -1,14 +1,10 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-import { WebSocketServer } from "ws"; // Import WebSocketServer from ws
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
-
-// Setup WebSocket Server
-const wss = new WebSocketServer({ noServer: true });
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -43,29 +39,6 @@ app.use((req, res, next) => {
 (async () => {
   const server = await registerRoutes(app);
 
-  // Handle upgrade requests for WebSocket
-  server.on("upgrade", (request, socket, head) => {
-    wss.handleUpgrade(request, socket, head, (ws) => {
-      wss.emit("connection", ws, request);
-    });
-  });
-
-  // Broadcast function to send data to all connected clients
-  const broadcastEmployeeData = (data: any) => {
-    wss.clients.forEach((client) => {
-      if (client.readyState === WebSocket.OPEN) {
-        client.send(JSON.stringify(data));
-      }
-    });
-  };
-
-  // Example function to call when employee data changes
-  async function updateEmployeeData() {
-    const { storage } = await import("./storage");
-    const employeeStats = await storage.getAttendanceStats(); // Adjust based on your data retrieval
-    broadcastEmployeeData(employeeStats);
-  }
-
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
@@ -77,10 +50,14 @@ app.use((req, res, next) => {
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
-  // Using production mode to avoid WebSocket connection issues
-  serveStatic(app);
+  if (process.env.NODE_ENV === "development") {
+    const { setupVite } = await import("./vite");
+    await setupVite(app, server);
+  } else {
+    serveStatic(app);
+  }
 
-  const port = 5000; // Force port 5000 for now
+  const port = process.env.PORT ? parseInt(process.env.PORT) : 5000;
   server.listen(port, "0.0.0.0", () => {
     log(`serving on port ${port}`);
   });
