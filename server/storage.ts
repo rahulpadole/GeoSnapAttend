@@ -213,17 +213,6 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Admin statistics
-  async clearAllEmployeeData(): Promise<void> {
-    // Delete all attendance records
-    await db.delete(attendanceRecords);
-    
-    // Delete all employee invitations
-    await db.delete(employeeInvitations);
-    
-    // Delete all users except keep admin users
-    await db.delete(users).where(eq(users.role, 'employee'));
-  }
-
   async getAttendanceStats(): Promise<{
     totalEmployees: number;
     presentToday: number;
@@ -235,52 +224,35 @@ export class DatabaseStorage implements IStorage {
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    // Total employees
-    const [totalEmployeesResult] = await db
-      .select({ count: sql<number>`count(*)` })
+    // Get total active employees
+    const totalEmployees = await db
+      .select({ count: sql`count(*)` })
       .from(users)
-      .where(eq(users.role, 'employee'));
-    
-    const totalEmployees = totalEmployeesResult?.count || 0;
+      .where(and(eq(users.isActive, true), eq(users.role, 'employee')));
 
-    // Present today (checked in)
-    const [presentTodayResult] = await db
-      .select({ count: sql<number>`count(distinct ${attendanceRecords.userId})` })
+    // Get today's attendance records
+    const todayAttendance = await db
+      .select()
       .from(attendanceRecords)
       .where(
         and(
-          eq(attendanceRecords.status, 'checked_in'),
           gte(attendanceRecords.date, today),
           lte(attendanceRecords.date, tomorrow)
         )
       );
-    
-    const presentToday = presentTodayResult?.count || 0;
 
-    // Late arrivals (checked in after 9:30 AM)
-    const lateTime = new Date(today);
-    lateTime.setHours(9, 30, 0, 0);
-    
-    const [lateArrivalsResult] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(attendanceRecords)
-      .where(
-        and(
-          gte(attendanceRecords.checkInTime, lateTime),
-          gte(attendanceRecords.date, today),
-          lte(attendanceRecords.date, tomorrow)
-        )
-      );
-    
-    const lateArrivals = lateArrivalsResult?.count || 0;
-
-    const absent = totalEmployees - presentToday;
+    const presentToday = todayAttendance.filter(record => record.checkInTime).length;
+    const lateArrivals = todayAttendance.filter(record => {
+      if (!record.checkInTime) return false;
+      const checkInHour = new Date(record.checkInTime).getHours();
+      return checkInHour >= 9; // Assuming 9 AM is the cutoff for late
+    }).length;
 
     return {
-      totalEmployees,
+      totalEmployees: Number(totalEmployees[0]?.count || 0),
       presentToday,
       lateArrivals,
-      absent,
+      absent: Number(totalEmployees[0]?.count || 0) - presentToday,
     };
   }
 }

@@ -61,6 +61,7 @@ app.use((req, res, next) => {
 
   // Example function to call when employee data changes
   async function updateEmployeeData() {
+    const { storage } = await import("./storage");
     const employeeStats = await storage.getAttendanceStats(); // Adjust based on your data retrieval
     broadcastEmployeeData(employeeStats);
   }
@@ -82,15 +83,8 @@ app.use((req, res, next) => {
     serveStatic(app);
   }
 
-  const port = parseInt(process.env.PORT || "5000", 10);
-  server.listen(
-    {
-      port,
-      host: "0.0.0.0", // Use 0.0.0.0 to allow external access
-      reusePort: true,
-    },
-    () => {
-      log(`serving on port ${port}`);
-    },
-  );
+  const port = 5000; // Force port 5000 for now
+  server.listen(port, "0.0.0.0", () => {
+    log(`serving on port ${port}`);
+  });
 })();
