@@ -19,6 +19,7 @@ Preferred communication style: Simple, everyday language.
 - Added initial seed data for testing (admin user, work location, employee invitation)
 - Fixed session secret configuration for proper authentication
 - Application successfully running on port 5000 with functional API endpoints
+- Note: WebSocket development server has connectivity issues - using production build for stability
 
 ## System Architecture
 
