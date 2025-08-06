@@ -206,6 +206,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         const invitationData = req.body;
         invitationData.invitedBy = user.id;
+        
+        // Convert hireDate string to Date object if provided
+        if (invitationData.hireDate) {
+          invitationData.hireDate = new Date(invitationData.hireDate);
+        }
 
         console.log("Invitation data:", invitationData);
 
