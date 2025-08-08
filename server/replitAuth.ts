@@ -12,12 +12,25 @@ if (!process.env.REPLIT_DOMAINS) {
   throw new Error("Environment variable REPLIT_DOMAINS not provided");
 }
 
+if (!process.env.REPL_ID) {
+  throw new Error("Environment variable REPL_ID not provided");
+}
+
 const getOidcConfig = memoize(
   async () => {
-    return await client.discovery(
-      new URL(process.env.ISSUER_URL ?? "https://replit.com/oidc"),
-      process.env.REPL_ID!
-    );
+    const issuerUrl = process.env.ISSUER_URL || "https://replit.com/oidc";
+    console.log("Discovering OIDC config for:", issuerUrl, "with client ID:", process.env.REPL_ID);
+    try {
+      const config = await client.discovery(
+        new URL(issuerUrl),
+        process.env.REPL_ID!
+      );
+      console.log("OIDC config discovered successfully");
+      return config;
+    } catch (error) {
+      console.error("OIDC discovery failed:", error);
+      throw error;
+    }
   },
   { maxAge: 3600 * 1000 }
 );
@@ -110,10 +123,22 @@ export async function setupAuth(app: Express) {
     tokens: client.TokenEndpointResponse & client.TokenEndpointResponseHelpers,
     verified: passport.AuthenticateCallback
   ) => {
-    const user = {};
-    updateUserSession(user, tokens);
-    await upsertUser(tokens.claims());
-    verified(null, user);
+    try {
+      console.log("Verifying user tokens...");
+      const user = {};
+      updateUserSession(user, tokens);
+      const claims = tokens.claims();
+      if (!claims) {
+        throw new Error("No claims found in token");
+      }
+      console.log("User claims:", { email: claims.email, sub: claims.sub });
+      await upsertUser(claims);
+      console.log("User verification successful");
+      verified(null, user);
+    } catch (error) {
+      console.error("User verification failed:", error);
+      verified(error, null);
+    }
   };
 
   for (const domain of process.env
@@ -144,6 +169,23 @@ export async function setupAuth(app: Express) {
     passport.authenticate(`replitauth:${req.hostname}`, {
       successReturnToOrRedirect: "/",
       failureRedirect: "/api/login",
+      failureFlash: false,
+    }, (err: any, user: any, info: any) => {
+      if (err) {
+        console.error("Authentication error:", err);
+        return res.redirect("/api/login");
+      }
+      if (!user) {
+        console.error("Authentication failed:", info);
+        return res.redirect("/api/login");
+      }
+      req.logIn(user, (err) => {
+        if (err) {
+          console.error("Login error:", err);
+          return res.redirect("/api/login");
+        }
+        return res.redirect("/");
+      });
     })(req, res, next);
   });
 
@@ -160,6 +202,28 @@ export async function setupAuth(app: Express) {
 }
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
+  // For development - create a test admin user session
+  if (process.env.NODE_ENV === 'development') {
+    // Check if we already have an admin user in the database
+    try {
+      const adminUser = await storage.getUserByEmail('parahul270@gmail.com');
+      if (adminUser) {
+        (req as any).user = {
+          claims: {
+            sub: adminUser.id,
+            email: adminUser.email,
+            first_name: adminUser.firstName,
+            last_name: adminUser.lastName,
+          },
+          expires_at: Math.floor(Date.now() / 1000) + 3600, // 1 hour
+        };
+        return next();
+      }
+    } catch (error) {
+      console.error('Error checking for admin user:', error);
+    }
+  }
+
   const user = req.user as any;
 
   if (!req.isAuthenticated() || !user.expires_at) {
