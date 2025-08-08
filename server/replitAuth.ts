@@ -207,6 +207,9 @@ export async function setupAuth(app: Express) {
       }
 
       if (user) {
+        // Clear the logged out flag
+        delete (req.session as any).loggedOut;
+        
         // Create session
         (req as any).user = {
           claims: {
@@ -259,81 +262,50 @@ export async function setupAuth(app: Express) {
   });
 
   app.get("/api/logout", (req, res) => {
+    // Mark as explicitly logged out for development
+    (req.session as any).loggedOut = true;
+    
     req.logout(() => {
-      res.redirect(
-        client.buildEndSessionUrl(config, {
-          client_id: process.env.REPL_ID!,
-          post_logout_redirect_uri: `${req.protocol}://${req.hostname}`,
-        }).href
-      );
+      if (process.env.NODE_ENV === 'development') {
+        // In development, redirect to root to show login page
+        res.redirect("/");
+      } else {
+        res.redirect(
+          client.buildEndSessionUrl(config, {
+            client_id: process.env.REPL_ID!,
+            post_logout_redirect_uri: `${req.protocol}://${req.hostname}`,
+          }).href
+        );
+      }
     });
   });
 }
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
-  // For development - create test user sessions
+  // For development - only auto-login admin if no session exists and not explicitly logged out
   if (process.env.NODE_ENV === 'development') {
-    try {
-      // First try admin user
-      const adminUser = await storage.getUserByEmail('parahul270@gmail.com');
-      if (adminUser) {
-        (req as any).user = {
-          claims: {
-            sub: adminUser.id,
-            email: adminUser.email,
-            first_name: adminUser.firstName,
-            last_name: adminUser.lastName,
-          },
-          expires_at: Math.floor(Date.now() / 1000) + 3600, // 1 hour
-        };
-        return next();
-      }
-      
-      // If no admin user, check if there's an email in query params for testing employee login
-      const testEmail = req.query.email as string;
-      if (testEmail) {
-        // Check if user exists or has invitation
-        let testUser = await storage.getUserByEmail(testEmail);
-        
-        if (!testUser) {
-          // Check if user has invitation
-          const invitation = await storage.getEmployeeInvitationByEmail(testEmail);
-          if (invitation) {
-            // Create user from invitation for testing
-            const testUserId = `test_${Date.now()}`;
-            await storage.upsertUser({
-              id: testUserId,
-              email: invitation.email,
-              firstName: invitation.firstName,
-              lastName: invitation.lastName,
-              profileImageUrl: null,
-              role: invitation.role,
-              department: invitation.department,
-              position: invitation.position,
-              phone: invitation.phone,
-              hireDate: invitation.hireDate,
-            });
-            
-            testUser = await storage.getUserByEmail(testEmail);
-            await storage.deleteEmployeeInvitation(invitation.id);
-          }
-        }
-        
-        if (testUser) {
+    // Check if user explicitly logged out (stored in session)
+    const hasLoggedOut = (req.session as any)?.loggedOut;
+    
+    if (!hasLoggedOut && !req.isAuthenticated()) {
+      try {
+        // Auto-login admin user only if no session exists
+        const adminUser = await storage.getUserByEmail('parahul270@gmail.com');
+        if (adminUser) {
           (req as any).user = {
             claims: {
-              sub: testUser.id,
-              email: testUser.email,
-              first_name: testUser.firstName,
-              last_name: testUser.lastName,
+              sub: adminUser.id,
+              email: adminUser.email,
+              first_name: adminUser.firstName,
+              last_name: adminUser.lastName,
             },
             expires_at: Math.floor(Date.now() / 1000) + 3600, // 1 hour
           };
           return next();
         }
+      } catch (error) {
+        console.error('Error in development auth bypass:', error);
       }
-    } catch (error) {
-      console.error('Error in development auth bypass:', error);
     }
   }
 
