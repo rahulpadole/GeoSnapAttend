@@ -1,10 +1,47 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Clock, MapPin, Camera, Shield, Users, BarChart3 } from "lucide-react";
+import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Login() {
+  const [email, setEmail] = useState("");
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
   const handleLogin = () => {
     window.location.href = "/api/login";
+  };
+
+  const devLoginMutation = useMutation({
+    mutationFn: async (email: string) => {
+      const response = await apiRequest("POST", "/api/dev-login", { email });
+      return response.json();
+    },
+    onSuccess: () => {
+      // Invalidate auth query to refresh user state
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      window.location.href = "/";
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Login Failed", 
+        description: error.message.includes("401") 
+          ? "No invitation found for this email address" 
+          : "Please try again",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const handleDevLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (email.trim()) {
+      devLoginMutation.mutate(email.trim());
+    }
   };
 
   return (
@@ -38,11 +75,47 @@ export default function Login() {
               </div>
             </div>
 
+            {/* Development login form for employees */}
+            <div className="space-y-4 mb-6">
+              <div className="text-center">
+                <p className="text-sm text-neutral mb-4">Employee Login (Development)</p>
+              </div>
+              <form onSubmit={handleDevLogin} className="space-y-3">
+                <Input
+                  type="email"
+                  placeholder="Enter your email address"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="w-full"
+                  data-testid="input-email"
+                />
+                <Button 
+                  type="submit"
+                  disabled={devLoginMutation.isPending}
+                  className="w-full bg-secondary hover:bg-secondary/90 text-white py-3"
+                  data-testid="button-dev-login"
+                >
+                  {devLoginMutation.isPending ? "Signing In..." : "Sign In with Email"}
+                </Button>
+              </form>
+            </div>
+
+            <div className="relative my-6">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">Or</span>
+              </div>
+            </div>
+
             <Button 
               onClick={handleLogin}
               className="w-full bg-primary hover:bg-primary/90 text-white py-4 text-lg"
+              data-testid="button-oauth-login"
             >
-              Sign In to Continue
+              Sign In with Replit Auth
             </Button>
 
             <div className="mt-6 text-center text-xs text-neutral">

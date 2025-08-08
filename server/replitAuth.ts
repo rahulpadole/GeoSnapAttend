@@ -165,6 +165,75 @@ export async function setupAuth(app: Express) {
     })(req, res, next);
   });
 
+  // Development login endpoint for testing
+  app.post("/api/dev-login", async (req, res) => {
+    if (process.env.NODE_ENV !== 'development') {
+      return res.status(404).json({ message: "Not found" });
+    }
+    
+    try {
+      const { email } = req.body;
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
+
+      // Check if user exists or has invitation
+      let user = await storage.getUserByEmail(email);
+      
+      if (!user) {
+        // Check if user has invitation
+        const invitation = await storage.getEmployeeInvitationByEmail(email);
+        if (!invitation) {
+          return res.status(401).json({ message: "No invitation found for this email" });
+        }
+        
+        // Create user from invitation
+        const userId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        await storage.upsertUser({
+          id: userId,
+          email: invitation.email,
+          firstName: invitation.firstName,
+          lastName: invitation.lastName,
+          profileImageUrl: null,
+          role: invitation.role,
+          department: invitation.department,
+          position: invitation.position,
+          phone: invitation.phone,
+          hireDate: invitation.hireDate,
+        });
+        
+        user = await storage.getUserByEmail(email);
+        await storage.deleteEmployeeInvitation(invitation.id);
+      }
+
+      if (user) {
+        // Create session
+        (req as any).user = {
+          claims: {
+            sub: user.id,
+            email: user.email,
+            first_name: user.firstName,
+            last_name: user.lastName,
+          },
+          expires_at: Math.floor(Date.now() / 1000) + 3600, // 1 hour
+        };
+        
+        req.login(user, (err) => {
+          if (err) {
+            console.error('Login error:', err);
+            return res.status(500).json({ message: "Login failed" });
+          }
+          res.json({ message: "Login successful", user });
+        });
+      } else {
+        res.status(401).json({ message: "User not found" });
+      }
+    } catch (error) {
+      console.error('Dev login error:', error);
+      res.status(500).json({ message: "Login failed" });
+    }
+  });
+
   app.get("/api/callback", (req, res, next) => {
     passport.authenticate(`replitauth:${req.hostname}`, {
       successReturnToOrRedirect: "/",
@@ -202,10 +271,10 @@ export async function setupAuth(app: Express) {
 }
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
-  // For development - create a test admin user session
+  // For development - create test user sessions
   if (process.env.NODE_ENV === 'development') {
-    // Check if we already have an admin user in the database
     try {
+      // First try admin user
       const adminUser = await storage.getUserByEmail('parahul270@gmail.com');
       if (adminUser) {
         (req as any).user = {
@@ -219,8 +288,52 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
         };
         return next();
       }
+      
+      // If no admin user, check if there's an email in query params for testing employee login
+      const testEmail = req.query.email as string;
+      if (testEmail) {
+        // Check if user exists or has invitation
+        let testUser = await storage.getUserByEmail(testEmail);
+        
+        if (!testUser) {
+          // Check if user has invitation
+          const invitation = await storage.getEmployeeInvitationByEmail(testEmail);
+          if (invitation) {
+            // Create user from invitation for testing
+            const testUserId = `test_${Date.now()}`;
+            await storage.upsertUser({
+              id: testUserId,
+              email: invitation.email,
+              firstName: invitation.firstName,
+              lastName: invitation.lastName,
+              profileImageUrl: null,
+              role: invitation.role,
+              department: invitation.department,
+              position: invitation.position,
+              phone: invitation.phone,
+              hireDate: invitation.hireDate,
+            });
+            
+            testUser = await storage.getUserByEmail(testEmail);
+            await storage.deleteEmployeeInvitation(invitation.id);
+          }
+        }
+        
+        if (testUser) {
+          (req as any).user = {
+            claims: {
+              sub: testUser.id,
+              email: testUser.email,
+              first_name: testUser.firstName,
+              last_name: testUser.lastName,
+            },
+            expires_at: Math.floor(Date.now() / 1000) + 3600, // 1 hour
+          };
+          return next();
+        }
+      }
     } catch (error) {
-      console.error('Error checking for admin user:', error);
+      console.error('Error in development auth bypass:', error);
     }
   }
 
