@@ -10,8 +10,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Auth routes
   app.get("/api/auth/user", async (req: any, res) => {
-    // Check if user explicitly logged out in development
-    if (process.env.NODE_ENV === 'development' && (req.session as any)?.loggedOut) {
+    // Check if user explicitly logged out or session is invalid
+    if ((req.session as any)?.loggedOut || !req.session || !req.user) {
       return res.status(401).json({ message: "Unauthorized" });
     }
     
