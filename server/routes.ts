@@ -8,7 +8,55 @@ import { z } from "zod";
 export async function registerRoutes(app: Express): Promise<Server> {
   setupAuth(app);
 
+  // Development login route for testing
+  app.post("/api/dev-login", async (req, res) => {
+    try {
+      const { email } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
 
+      // Check if user exists or has an invitation
+      let user = await storage.getUserByEmail(email);
+      
+      if (!user) {
+        // Check for invitation
+        const invitation = await storage.getEmployeeInvitationByEmail(email);
+        if (!invitation) {
+          return res.status(401).json({ message: "No invitation found for this email address" });
+        }
+        
+        // Create user from invitation for development
+        user = await storage.upsertUser({
+          email: invitation.email,
+          firstName: invitation.firstName,
+          lastName: invitation.lastName,
+          role: invitation.role,
+          department: invitation.department,
+          position: invitation.position,
+          phone: invitation.phone,
+          hireDate: invitation.hireDate,
+          isActive: true,
+        });
+
+        // Remove the invitation
+        await storage.deleteEmployeeInvitation(invitation.id);
+      }
+
+      // Log the user in
+      req.logIn(user, (err) => {
+        if (err) {
+          return res.status(500).json({ message: "Login error" });
+        }
+        const { password, ...userWithoutPassword } = user;
+        res.json(userWithoutPassword);
+      });
+    } catch (error) {
+      console.error("Dev login error:", error);
+      res.status(500).json({ message: "Login failed" });
+    }
+  });
 
   // Profile routes
   app.get("/api/profile", isAuthenticated, async (req: any, res) => {

@@ -248,19 +248,23 @@ export function setupAuth(app: Express) {
     });
   });
 
-  // Google OAuth routes
-  if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
-    app.get("/api/auth/google", passport.authenticate("google", { scope: ["profile", "email"] }));
+  // Google OAuth routes (always register routes but handle missing config gracefully)
+  app.get("/api/auth/google", (req, res, next) => {
+    if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+      return res.status(400).json({ message: "Google OAuth is not configured" });
+    }
+    passport.authenticate("google", { scope: ["profile", "email"] })(req, res, next);
+  });
 
-    app.get("/api/auth/google/callback", 
-      passport.authenticate("google", { failureRedirect: "/auth?error=google_auth_failed" }),
-      (req, res) => {
-        // Successful authentication, redirect to dashboard
-        const user = req.user as any;
-        res.redirect(user.role === 'admin' ? '/admin' : '/employee');
-      }
-    );
-  }
+  app.get("/api/auth/google/callback", (req, res, next) => {
+    if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+      return res.redirect("/auth?error=google_oauth_not_configured");
+    }
+    passport.authenticate("google", { 
+      failureRedirect: "/auth?error=google_auth_failed",
+      successRedirect: "/"
+    })(req, res, next);
+  });
 
   // Password reset request
   app.post("/api/forgot-password", async (req, res) => {
