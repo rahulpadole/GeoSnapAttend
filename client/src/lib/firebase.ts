@@ -8,7 +8,7 @@ const firebaseConfig = {
   projectId: "geosnapattend",
   storageBucket: "geosnapattend.appspot.com",
   messagingSenderId: "523043404389",
-  appId: "1:523043404389:web:YOUR_APP_ID"
+  appId: "1:523043404389:web:geosnapattend"
 };
 
 // Initialize Firebase
