@@ -1,4 +1,4 @@
-import { storage } from "./storage";
+import { storage } from "./firebase-storage";
 
 async function createAdminUsers() {
   try {
@@ -6,7 +6,6 @@ async function createAdminUsers() {
     
     // Create admin user
     await storage.upsertUser({
-      id: "admin-001",
       email: "admin@company.com",
       firstName: "System",
       lastName: "Administrator",
@@ -16,7 +15,6 @@ async function createAdminUsers() {
 
     // Create employee users for testing
     await storage.upsertUser({
-      id: "emp-001",
       email: "john.doe@company.com",
       firstName: "John",
       lastName: "Doe",
@@ -25,7 +23,6 @@ async function createAdminUsers() {
     });
 
     await storage.upsertUser({
-      id: "emp-002",
       email: "jane.smith@company.com",
       firstName: "Jane",
       lastName: "Smith",

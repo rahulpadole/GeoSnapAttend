@@ -5,9 +5,9 @@ import { Express } from "express";
 import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
-import { storage } from "./storage";
-import { User as SelectUser } from "@shared/schema";
-import connectPg from "connect-pg-simple";
+import { storage } from "./firebase-storage";
+import { User as SelectUser } from "@shared/firebase-schema";
+import { FirebaseSessionStore } from "./firebase-session-store";
 import { sendEmail, generatePasswordResetEmail } from "./email";
 
 declare global {
@@ -34,12 +34,8 @@ async function comparePasswords(supplied: string, stored: string) {
 function getSession() {
   const sessionSecret = process.env.SESSION_SECRET || 'attendance-tracker-secret-key-change-in-production';
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
-  const pgStore = connectPg(session);
-  const sessionStore = new pgStore({
-    conString: process.env.DATABASE_URL,
-    createTableIfMissing: false,
+  const sessionStore = new FirebaseSessionStore({
     ttl: sessionTtl,
-    tableName: "sessions",
   });
   return session({
     secret: sessionSecret,

@@ -1,8 +1,8 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
+import { storage } from "./firebase-storage";
 import { setupAuth, isAuthenticated } from "./auth";
-import { insertAttendanceRecordSchema } from "@shared/schema";
+import { insertAttendanceRecordSchema } from "@shared/firebase-schema";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -88,10 +88,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         const checkOutTime = new Date();
         const checkInTime = new Date(today.checkInTime!);
-        const hoursWorked = (
+        const hoursWorked = parseFloat((
           (checkOutTime.getTime() - checkInTime.getTime()) /
           (1000 * 60 * 60)
-        ).toFixed(2);
+        ).toFixed(2));
 
         const updated = await storage.updateAttendanceRecord(today.id, {
           checkOutTime,
