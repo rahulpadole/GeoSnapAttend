@@ -87,6 +87,25 @@ async function upsertUser(
     return;
   }
   
+  // Check if this is the first user (make them admin)
+  const allUsers = await storage.getAllUsers();
+  if (allUsers.length === 0) {
+    // First user becomes admin
+    await storage.upsertUser({
+      id: claims["sub"],
+      email: claims["email"],
+      firstName: claims["first_name"],
+      lastName: claims["last_name"],
+      profileImageUrl: claims["profile_image_url"],
+      role: "admin",
+      department: "Administration",
+      position: "System Administrator",
+      isActive: true,
+    });
+    console.log("First admin user created:", email);
+    return;
+  }
+  
   // Check if user has an invitation
   const invitation = await storage.getEmployeeInvitationByEmail(email);
   if (!invitation) {
