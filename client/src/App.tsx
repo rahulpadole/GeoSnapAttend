@@ -7,7 +7,6 @@ import { useAuth } from "@/hooks/useAuth";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import AuthPage from "@/pages/auth-page";
-import Login from "@/pages/login";
 import ResetPasswordPage from "@/pages/reset-password";
 import Profile from "@/pages/profile";
 import EmployeeDashboard from "@/pages/employee-dashboard";
@@ -30,7 +29,6 @@ function Router() {
         <>
           <Route path="/" component={AuthPage} />
           <Route path="/auth" component={AuthPage} />
-          <Route path="/login" component={Login} />
           <Route path="/reset-password" component={ResetPasswordPage} />
           <Route path="/landing" component={Landing} />
         </>
