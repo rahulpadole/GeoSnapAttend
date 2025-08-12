@@ -16,14 +16,32 @@ export default function Login() {
   
   const googleLoginMutation = useMutation({
     mutationFn: async () => {
-      const result = await signInWithPopup(auth, googleProvider);
-      const idToken = await result.user.getIdToken();
-      
-      // Send the ID token to your backend for verification and session creation
-      const response = await apiRequest("POST", "/api/auth/firebase-google", { 
-        idToken 
-      });
-      return response.json();
+      try {
+        const result = await signInWithPopup(auth, googleProvider);
+        const idToken = await result.user.getIdToken();
+        
+        // Send the ID token to your backend for verification and session creation
+        const response = await apiRequest("POST", "/api/auth/firebase-google", { 
+          idToken 
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || "Authentication failed");
+        }
+        
+        return response.json();
+      } catch (error: any) {
+        // Handle Firebase Auth errors
+        if (error.code === 'auth/popup-closed-by-user') {
+          throw new Error("Sign-in was cancelled");
+        } else if (error.code === 'auth/popup-blocked') {
+          throw new Error("Popup was blocked. Please allow popups and try again");
+        } else if (error.code === 'auth/network-request-failed') {
+          throw new Error("Network error. Please check your connection");
+        }
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });

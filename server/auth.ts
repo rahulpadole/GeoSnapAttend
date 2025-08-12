@@ -1,6 +1,5 @@
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
-import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import { Express } from "express";
 import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
@@ -95,64 +94,7 @@ export function setupAuth(app: Express) {
     )
   );
 
-  // Google OAuth strategy
-  if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
-    passport.use(
-      new GoogleStrategy(
-        {
-          clientID: process.env.GOOGLE_CLIENT_ID,
-          clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-          callbackURL: "/api/auth/google/callback",
-        },
-        async (accessToken, refreshToken, profile, done) => {
-          try {
-            const email = profile.emails?.[0]?.value;
-            if (!email) {
-              return done(null, false, { message: "No email provided by Google" });
-            }
-
-            // Check if user exists
-            let user = await storage.getUserByEmail(email);
-
-            if (user) {
-              // Update Google ID if not set
-              if (!user.googleId) {
-                user = await storage.updateUser(user.id, { googleId: profile.id }) || user;
-              }
-            } else {
-              // Check if there's an employee invitation for this email
-              const invitation = await storage.getEmployeeInvitationByEmail(email);
-              if (!invitation) {
-                return done(null, false, { message: "No invitation found for this email address" });
-              }
-
-              // Create new user with Google OAuth
-              user = await storage.upsertUser({
-                email,
-                googleId: profile.id,
-                firstName: profile.name?.givenName || "",
-                lastName: profile.name?.familyName || "",
-                profileImageUrl: profile.photos?.[0]?.value,
-                role: invitation.role,
-                department: invitation.department,
-                position: invitation.position,
-                phone: invitation.phone,
-                hireDate: invitation.hireDate,
-                isActive: true,
-              });
-
-              // Remove the invitation
-              await storage.deleteEmployeeInvitation(invitation.id);
-            }
-
-            return done(null, user);
-          } catch (error) {
-            return done(error);
-          }
-        }
-      )
-    );
-  }
+  
 
   passport.serializeUser((user, done) => done(null, user.id));
   passport.deserializeUser(async (id: string, done) => {
@@ -248,22 +190,70 @@ export function setupAuth(app: Express) {
     });
   });
 
-  // Google OAuth routes (always register routes but handle missing config gracefully)
-  app.get("/api/auth/google", (req, res, next) => {
-    if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
-      return res.status(400).json({ message: "Google OAuth is not configured" });
-    }
-    passport.authenticate("google", { scope: ["profile", "email"] })(req, res, next);
-  });
+  // Firebase Authentication endpoint for Google sign-in
+  app.post("/api/auth/firebase-google", async (req, res) => {
+    try {
+      const { idToken } = req.body;
 
-  app.get("/api/auth/google/callback", (req, res, next) => {
-    if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
-      return res.redirect("/auth?error=google_oauth_not_configured");
+      if (!idToken) {
+        return res.status(400).json({ message: "ID token is required" });
+      }
+
+      // Verify the Firebase ID token
+      const decodedToken = await auth.verifyIdToken(idToken);
+      const { email, name, picture, uid } = decodedToken;
+
+      if (!email) {
+        return res.status(400).json({ message: "No email provided by Google" });
+      }
+
+      // Check if user exists
+      let user = await storage.getUserByEmail(email);
+
+      if (user) {
+        // Update Firebase UID if not set
+        if (!user.firebaseUid) {
+          user = await storage.updateUser(user.id, { firebaseUid: uid }) || user;
+        }
+      } else {
+        // Check if there's an employee invitation for this email
+        const invitation = await storage.getEmployeeInvitationByEmail(email);
+        if (!invitation) {
+          return res.status(401).json({ message: "No invitation found for this email address" });
+        }
+
+        // Create new user with Firebase Authentication
+        const nameParts = (name || "").split(" ");
+        user = await storage.upsertUser({
+          email,
+          firebaseUid: uid,
+          firstName: nameParts[0] || "",
+          lastName: nameParts.slice(1).join(" ") || "",
+          profileImageUrl: picture,
+          role: invitation.role,
+          department: invitation.department,
+          position: invitation.position,
+          phone: invitation.phone,
+          hireDate: invitation.hireDate,
+          isActive: true,
+        });
+
+        // Remove the invitation
+        await storage.deleteEmployeeInvitation(invitation.id);
+      }
+
+      // Log the user in with Passport
+      req.logIn(user, (err) => {
+        if (err) {
+          return res.status(500).json({ message: "Login error" });
+        }
+        const { password, ...userWithoutPassword } = user;
+        res.json(userWithoutPassword);
+      });
+    } catch (error) {
+      console.error("Firebase Google authentication error:", error);
+      res.status(401).json({ message: "Invalid ID token" });
     }
-    passport.authenticate("google", { 
-      failureRedirect: "/auth?error=google_auth_failed",
-      successRedirect: "/"
-    })(req, res, next);
   });
 
   // Password reset request
