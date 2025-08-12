@@ -7,7 +7,7 @@ import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./firebase-storage.js";
 import { auth } from "./firebase.js";
-import { randomBytes } from "crypto";
+import { FirebaseSessionStore } from "./firebase-session-store.js";
 import { sendPasswordResetEmail } from "./email.js";
 
 declare global {
