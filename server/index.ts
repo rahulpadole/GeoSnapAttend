@@ -37,6 +37,16 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Create default admin user on startup
+  try {
+    const { createDefaultAdmin } = await import("./create-admin.js");
+    await createDefaultAdmin();
+  } catch (error) {
+    console.log("Note: Firebase Firestore needs to be enabled. Please visit:");
+    console.log("https://console.developers.google.com/apis/api/firestore.googleapis.com/overview?project=geosnapattend");
+    console.log("Then restart the application to create the admin user.");
+  }
+
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

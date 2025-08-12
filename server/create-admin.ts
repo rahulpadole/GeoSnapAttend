@@ -36,13 +36,24 @@ async function createDefaultAdmin() {
       isActive: true,
     });
 
-    console.log("Default admin user created successfully!");
-    console.log("Email: parahul270@gmail.com");
-    console.log("Password: Rahul@2004");
-    console.log("User ID:", adminUser.id);
+    console.log("✓ Default admin user created successfully!");
+    console.log("✓ Email: parahul270@gmail.com");
+    console.log("✓ Password: Rahul@2004");
+    console.log("✓ Can also login with Google");
+    console.log("✓ User ID:", adminUser.id);
     
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.message?.includes('Cloud Firestore API has not been used') || error?.code === 7) {
+      console.log("⚠️  Firebase Firestore API needs to be enabled first.");
+      console.log("📝 Please follow these steps:");
+      console.log("1. Visit: https://console.developers.google.com/apis/api/firestore.googleapis.com/overview?project=geosnapattend");
+      console.log("2. Click 'Enable' button");
+      console.log("3. Wait a few minutes for the API to activate");
+      console.log("4. Restart this application");
+      throw error;
+    }
     console.error("Error creating default admin:", error);
+    throw error;
   }
 }
 
