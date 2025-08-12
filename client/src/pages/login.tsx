@@ -13,23 +13,23 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  
+
   const googleLoginMutation = useMutation({
     mutationFn: async () => {
       try {
         const result = await signInWithPopup(auth, googleProvider);
         const idToken = await result.user.getIdToken();
-        
+
         // Send the ID token to your backend for verification and session creation
-        const response = await apiRequest("POST", "/api/auth/firebase-google", { 
-          idToken 
+        const response = await apiRequest("POST", "/api/auth/firebase-google", {
+          idToken
         });
-        
+
         if (!response.ok) {
           const errorData = await response.json();
           throw new Error(errorData.message || "Authentication failed");
         }
-        
+
         return response.json();
       } catch (error: any) {
         // Handle Firebase Auth errors
@@ -72,9 +72,9 @@ export default function Login() {
     },
     onError: (error: any) => {
       toast({
-        title: "Login Failed", 
-        description: error.message.includes("401") 
-          ? "No invitation found for this email address" 
+        title: "Login Failed",
+        description: error.message.includes("401")
+          ? "No invitation found for this email address"
           : "Please try again",
         variant: "destructive"
       });
@@ -102,7 +102,7 @@ export default function Login() {
             </CardTitle>
             <p className="text-neutral">Smart attendance with geolocation verification</p>
           </CardHeader>
-          
+
           <CardContent className="p-8">
             <div className="space-y-4 mb-8">
               <div className="flex items-center space-x-3 text-sm">
@@ -134,7 +134,7 @@ export default function Login() {
                   className="w-full"
                   data-testid="input-email"
                 />
-                <Button 
+                <Button
                   type="submit"
                   disabled={devLoginMutation.isPending}
                   className="w-full bg-secondary hover:bg-secondary/90 text-white py-3"
@@ -154,7 +154,7 @@ export default function Login() {
               </div>
             </div>
 
-            <Button 
+            <Button
               onClick={handleGoogleLogin}
               disabled={googleLoginMutation.isPending}
               className="w-full bg-primary hover:bg-primary/90 text-white py-4 text-lg"

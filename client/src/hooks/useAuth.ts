@@ -16,9 +16,9 @@ export function useAuth() {
             "Content-Type": "application/json",
           },
         });
-        
+
         console.log("Auth response status:", response.status);
-        
+
         if (!response.ok) {
           if (response.status === 401) {
             console.log("User not authenticated");
@@ -26,7 +26,7 @@ export function useAuth() {
           }
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
-        
+
         const userData = await response.json();
         console.log("Auth user data:", userData);
         return userData;
