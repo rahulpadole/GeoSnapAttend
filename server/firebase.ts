@@ -26,7 +26,7 @@ if (!admin.apps.length) {
 export const db = admin.firestore();
 export const auth = admin.auth();
 
-// Collection names
+// Collection names for Firebase Firestore
 export const COLLECTIONS = {
   USERS: 'users',
   ATTENDANCE_RECORDS: 'attendanceRecords',
@@ -35,3 +35,20 @@ export const COLLECTIONS = {
   PASSWORD_RESET_TOKENS: 'passwordResetTokens',
   SESSIONS: 'sessions'
 } as const;
+
+// Helper function to check Firestore connection
+export async function checkFirestoreConnection() {
+  try {
+    const testDoc = await db.collection('_health_check').doc('test').get();
+    console.log('✓ Firebase Firestore connection successful');
+    return true;
+  } catch (error: any) {
+    if (error?.code === 7) {
+      console.log('❌ Firestore API not enabled. Please enable it at:');
+      console.log('https://console.developers.google.com/apis/api/firestore.googleapis.com/overview?project=geosnapattend');
+      return false;
+    }
+    console.log('❌ Firestore connection error:', error?.message);
+    return false;
+  }
+}

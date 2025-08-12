@@ -50,13 +50,15 @@ Preferred communication style: Simple, everyday language.
 - **Session Management**: Express sessions with PostgreSQL storage for persistent login state
 
 ### Database Design
-- **Primary Database**: PostgreSQL with connection pooling via Neon serverless
-- **Schema Management**: Drizzle migrations for version-controlled database changes
-- **Key Tables**:
-  - Users table with role-based access (employee/admin)
+- **Primary Database**: Firebase Firestore (NoSQL document database)
+- **Schema Management**: Firebase collections with TypeScript type definitions
+- **Key Collections**:
+  - Users collection with role-based access (employee/admin)
   - Attendance records with check-in/out timestamps and geolocation data
-  - Sessions table for authentication state persistence
+  - Sessions collection for authentication state persistence
   - Work locations for office/site management
+  - Employee invitations for pre-registration
+  - Password reset tokens for secure password recovery
 
 ### Authentication & Authorization
 - **Strategy**: Replit Auth integration with OpenID Connect protocol
