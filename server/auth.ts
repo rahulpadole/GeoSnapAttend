@@ -7,8 +7,7 @@ import { promisify } from "util";
 import { storage } from "./firebase-storage.js";
 import { auth } from "./firebase.js";
 import { FirebaseSessionStore } from "./firebase-session-store.js";
-import { sendPasswordResetEmail, sendEmail, generatePasswordResetEmail } from "./email.js";
-import type { SelectUser } from "../shared/schema.js";
+import { sendPasswordResetEmail } from "./email.js";
 
 declare global {
   namespace Express {
@@ -194,51 +193,36 @@ export function setupAuth(app: Express) {
   // Firebase Authentication endpoint for Google sign-in
   app.post("/api/auth/firebase-google", async (req, res) => {
     try {
-      console.log('Firebase Google auth request received');
       const { idToken } = req.body;
 
       if (!idToken) {
-        console.log('No ID token provided');
         return res.status(400).json({ message: "ID token is required" });
       }
 
       // Verify the Firebase ID token
-      console.log('Verifying Firebase ID token...');
       const decodedToken = await auth.verifyIdToken(idToken);
       const { email, name, picture, uid } = decodedToken;
-      console.log('Token verified for email:', email);
 
       if (!email) {
-        console.log('No email in token');
         return res.status(400).json({ message: "No email provided by Google" });
       }
 
       // Check if user exists
       let user = await storage.getUserByEmail(email);
-      console.log('User lookup result:', user ? 'found' : 'not found');
 
       if (user) {
         // Update Firebase UID if not set
         if (!user.firebaseUid) {
-          console.log('Updating user with Firebase UID');
           user = await storage.updateUser(user.id, { firebaseUid: uid }) || user;
-        }
-        
-        if (!user.isActive) {
-          console.log('User account is inactive');
-          return res.status(401).json({ message: "Account is inactive" });
         }
       } else {
         // Check if there's an employee invitation for this email
-        console.log('Checking for employee invitation...');
         const invitation = await storage.getEmployeeInvitationByEmail(email);
         if (!invitation) {
-          console.log('No invitation found for email:', email);
           return res.status(401).json({ message: "No invitation found for this email address" });
         }
 
         // Create new user with Firebase Authentication
-        console.log('Creating new user from invitation');
         const nameParts = (name || "").split(" ");
         user = await storage.upsertUser({
           email,
@@ -256,17 +240,13 @@ export function setupAuth(app: Express) {
 
         // Remove the invitation
         await storage.deleteEmployeeInvitation(invitation.id);
-        console.log('User created and invitation removed');
       }
 
       // Log the user in with Passport
-      console.log('Logging in user...');
       req.logIn(user, (err) => {
         if (err) {
-          console.error('Login error:', err);
           return res.status(500).json({ message: "Login error" });
         }
-        console.log('User logged in successfully');
         const { password, ...userWithoutPassword } = user;
         res.json(userWithoutPassword);
       });
@@ -350,8 +330,6 @@ export function setupAuth(app: Express) {
       res.status(500).json({ message: "Failed to reset password" });
     }
   });
-
-  
 
   // Get current user route
   app.get("/api/user", (req, res) => {

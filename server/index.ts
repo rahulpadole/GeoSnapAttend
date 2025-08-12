@@ -78,7 +78,7 @@ async function startServer() {
     const PORT = process.env.PORT || 5000;
     app.listen(PORT, "0.0.0.0", () => {
       console.log(`🚀 Server running on port ${PORT}`);
-      console.log(`📱 Application ready at: http://0.0.0.0:${PORT}`);
+      console.log(`📱 Application ready at: http://localhost:${PORT}`);
       console.log(`👤 Admin login: parahul270@gmail.com / Rahul@2004`);
     });
 
