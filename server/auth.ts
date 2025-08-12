@@ -42,10 +42,12 @@ function getSession() {
     store: sessionStore,
     resave: false,
     saveUninitialized: false,
+    rolling: true, // Extend session on each request
     cookie: {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: false, // Set to false for development, true for production
       maxAge: sessionTtl,
+      sameSite: 'lax',
     },
   });
 }
@@ -337,6 +339,13 @@ export function setupAuth(app: Express) {
 
   // Get current user route
   app.get("/api/user", (req, res) => {
+    console.log('Session check:', {
+      sessionID: req.sessionID,
+      isAuthenticated: req.isAuthenticated(),
+      user: req.user ? 'exists' : 'none',
+      session: req.session ? 'exists' : 'none'
+    });
+    
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: "Unauthorized" });
     }
