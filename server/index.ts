@@ -37,15 +37,20 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Check Firebase connection and create admin user
+  // Initialize Firebase Firestore and create admin user
   try {
-    const { checkFirestoreConnection } = await import("./firebase.js");
-    const isConnected = await checkFirestoreConnection();
+    const { initializeFirestore, createDefaultWorkLocations } = await import("./initialize-firestore.js");
+    const isInitialized = await initializeFirestore();
     
-    if (isConnected) {
+    if (isInitialized) {
       console.log('🔥 Firebase Firestore is ready!');
+      
+      // Create default admin user
       const { createDefaultAdmin } = await import("./create-admin.js");
       await createDefaultAdmin();
+      
+      // Create default work locations
+      await createDefaultWorkLocations();
     } else {
       console.log('⚠️  To complete setup, enable Firestore API:');
       console.log('1. Visit: https://console.developers.google.com/apis/api/firestore.googleapis.com/overview?project=geosnapattend');

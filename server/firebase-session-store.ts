@@ -46,9 +46,13 @@ export class FirebaseSessionStore extends Store {
   set(sid: string, session: any, callback?: (err?: any) => void): void {
     try {
       const expire = new Date(Date.now() + this.ttl);
+      
+      // Serialize session data to remove any non-serializable objects
+      const serializedSession = JSON.parse(JSON.stringify(session));
+      
       const sessionData = {
         sid,
-        sess: session,
+        sess: serializedSession,
         expire,
         updatedAt: new Date(),
       };
@@ -87,9 +91,13 @@ export class FirebaseSessionStore extends Store {
     try {
       const expire = new Date(Date.now() + this.ttl);
       
+      // Serialize session data to remove any non-serializable objects
+      const serializedSession = JSON.parse(JSON.stringify(session));
+      
       db.collection(COLLECTIONS.SESSIONS)
         .doc(sid)
         .update({
+          sess: serializedSession,
           expire,
           updatedAt: new Date(),
         })
