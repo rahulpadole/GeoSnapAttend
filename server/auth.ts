@@ -95,7 +95,7 @@ export function setupAuth(app: Express) {
     )
   );
 
-  
+
 
   passport.serializeUser((user, done) => done(null, user.id));
   passport.deserializeUser(async (id: string, done) => {
@@ -223,7 +223,7 @@ export function setupAuth(app: Express) {
           console.log('Updating user with Firebase UID');
           user = await storage.updateUser(user.id, { firebaseUid: uid }) || user;
         }
-        
+
         if (!user.isActive) {
           console.log('User account is inactive');
           return res.status(401).json({ message: "Account is inactive" });
@@ -351,22 +351,27 @@ export function setupAuth(app: Express) {
     }
   });
 
-  
+
 
   // Get current user route
   app.get("/api/user", (req, res) => {
     console.log('Session check:', {
       sessionID: req.sessionID,
       isAuthenticated: req.isAuthenticated(),
-      user: req.user ? 'exists' : 'none',
-      session: req.session ? 'exists' : 'none'
+      user: req.user ? 'exists' : 'null',
+      session: req.session ? 'exists' : 'null',
+      cookies: req.headers.cookie || 'none'
     });
 
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ message: "Unauthorized" });
+    if (req.isAuthenticated() && req.user) {
+      const user = req.user as any;
+      const { password, ...userWithoutPassword } = user;
+      console.log('Sending user data:', { email: userWithoutPassword.email, role: userWithoutPassword.role });
+      res.json(userWithoutPassword);
+    } else {
+      console.log('User not authenticated - sending 401');
+      res.status(401).json({ message: "Not authenticated" });
     }
-    const { password, ...userWithoutPassword } = req.user as any;
-    res.json(userWithoutPassword);
   });
 }
 

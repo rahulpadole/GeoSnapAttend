@@ -16,6 +16,8 @@ import AdminDashboard from "@/pages/admin-dashboard";
 function Router() {
   const { isAuthenticated, isLoading, user } = useAuth();
 
+  console.log('Router state:', { isAuthenticated, isLoading, user: user ? 'exists' : 'null' });
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -28,7 +30,7 @@ function Router() {
     <Switch>
       {!isAuthenticated ? (
         <>
-          <Route path="/" component={AuthPage} />
+          <Route path="/" component={Login} />
           <Route path="/auth" component={AuthPage} />
           <Route path="/login" component={Login} />
           <Route path="/reset-password" component={ResetPasswordPage} />
@@ -36,7 +38,7 @@ function Router() {
         </>
       ) : (
         <>
-          <Route path="/">
+          <Route path="/" exact>
             {user?.role === 'admin' ? <AdminDashboard /> : <EmployeeDashboard />}
           </Route>
           <Route path="/profile" component={Profile} />
