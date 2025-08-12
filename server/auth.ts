@@ -61,22 +61,32 @@ export function setupAuth(app: Express) {
       { usernameField: 'email' },
       async (email, password, done) => {
         try {
+          console.log('Local strategy - login attempt for:', email);
           const user = await storage.getUserByEmail(email);
+          console.log('User found:', user ? 'yes' : 'no');
+          
           if (!user || !user.isActive) {
+            console.log('User not found or inactive');
             return done(null, false, { message: "Invalid email or password" });
           }
 
           if (!user.password) {
+            console.log('User has no password set');
             return done(null, false, { message: "Please use Google login or reset your password" });
           }
 
+          console.log('Comparing passwords...');
           const isValid = await comparePasswords(password, user.password);
+          console.log('Password valid:', isValid);
+          
           if (!isValid) {
             return done(null, false, { message: "Invalid email or password" });
           }
 
+          console.log('Login successful for user:', user.email);
           return done(null, user);
         } catch (error) {
+          console.error('Local strategy error:', error);
           return done(error);
         }
       }
