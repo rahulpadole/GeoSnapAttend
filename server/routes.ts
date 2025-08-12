@@ -1,38 +1,19 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupAuth, isAuthenticated } from "./auth";
 import { insertAttendanceRecordSchema } from "@shared/schema";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  await setupAuth(app);
+  setupAuth(app);
 
-  // Auth routes
-  app.get("/api/auth/user", async (req: any, res) => {
-    // Check if user explicitly logged out or session is invalid
-    if ((req.session as any)?.loggedOut || !req.session || !req.user) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
-    
-    // Apply authentication middleware
-    isAuthenticated(req, res, async () => {
-      try {
-        const userId = req.user.claims.sub;
-        const user = await storage.getUser(userId);
-        if (!user) return res.status(404).json({ message: "User not found" });
-        res.json(user);
-      } catch (error) {
-        console.error("Error fetching user:", error);
-        res.status(500).json({ message: "Failed to fetch user" });
-      }
-    });
-  });
+
 
   // Profile routes
   app.get("/api/profile", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
       if (!user) return res.status(404).json({ message: "User not found" });
       res.json(user);
@@ -44,11 +25,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/profile", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const updates = req.body;
 
       delete updates.id;
       delete updates.role;
+      delete updates.password;
       delete updates.createdAt;
       delete updates.updatedAt;
 
@@ -68,7 +50,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     isAuthenticated,
     async (req: any, res) => {
       try {
-        const userId = req.user.claims.sub;
+        const userId = req.user.id;
         const { location, photo } = req.body;
 
         const existing = await storage.getTodayAttendanceRecord(userId);
@@ -97,7 +79,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     isAuthenticated,
     async (req: any, res) => {
       try {
-        const userId = req.user.claims.sub;
+        const userId = req.user.id;
         const { location, photo } = req.body;
 
         const today = await storage.getTodayAttendanceRecord(userId);
@@ -129,7 +111,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/attendance/today", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const today = await storage.getTodayAttendanceRecord(userId);
       res.json(today);
     } catch (error) {
@@ -140,7 +122,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/attendance/history", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const history = await storage.getUserAttendanceRecords(userId, 10);
       res.json(history);
     } catch (error) {
@@ -155,7 +137,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     isAuthenticated,
     async (req: any, res) => {
       try {
-        const user = await storage.getUser(req.user.claims.sub);
+        const user = await storage.getUser(req.user.id);
         if (user?.role !== "admin")
           return res.status(403).json({ message: "Access denied" });
 
@@ -177,7 +159,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/admin/stats", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (user?.role !== "admin")
         return res.status(403).json({ message: "Access denied" });
 
@@ -191,7 +173,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/admin/employees", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (user?.role !== "admin")
         return res.status(403).json({ message: "Access denied" });
 
@@ -208,7 +190,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     isAuthenticated,
     async (req: any, res) => {
       try {
-        const user = await storage.getUser(req.user.claims.sub);
+        const user = await storage.getUser(req.user.id);
         if (user?.role !== "admin")
           return res.status(403).json({ message: "Access denied" });
 
@@ -237,7 +219,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     isAuthenticated,
     async (req: any, res) => {
       try {
-        const user = await storage.getUser(req.user.claims.sub);
+        const user = await storage.getUser(req.user.id);
         if (user?.role !== "admin")
           return res.status(403).json({ message: "Access denied" });
 
@@ -255,7 +237,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     isAuthenticated,
     async (req: any, res) => {
       try {
-        const user = await storage.getUser(req.user.claims.sub);
+        const user = await storage.getUser(req.user.id);
         if (user?.role !== "admin")
           return res.status(403).json({ message: "Access denied" });
 
@@ -273,7 +255,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     isAuthenticated,
     async (req: any, res) => {
       try {
-        const user = await storage.getUser(req.user.claims.sub);
+        const user = await storage.getUser(req.user.id);
         if (user?.role !== "admin")
           return res.status(403).json({ message: "Access denied" });
 

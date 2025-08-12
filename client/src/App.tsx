@@ -6,7 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
-import Login from "@/pages/login";
+import AuthPage from "@/pages/auth-page";
 import Profile from "@/pages/profile";
 import EmployeeDashboard from "@/pages/employee-dashboard";
 import AdminDashboard from "@/pages/admin-dashboard";
@@ -26,8 +26,9 @@ function Router() {
     <Switch>
       {!isAuthenticated ? (
         <>
-          <Route path="/" component={Landing} />
-          <Route path="/login" component={Login} />
+          <Route path="/" component={AuthPage} />
+          <Route path="/auth" component={AuthPage} />
+          <Route path="/landing" component={Landing} />
         </>
       ) : (
         <>

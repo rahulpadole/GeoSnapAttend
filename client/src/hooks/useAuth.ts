@@ -3,14 +3,14 @@ import type { User } from "@shared/schema";
 
 export function useAuth() {
   const { data: user, isLoading, error } = useQuery<User | null>({
-    queryKey: ["/api/auth/user"],
+    queryKey: ["/api/user"],
     retry: false,
     refetchOnWindowFocus: false,
     staleTime: 5 * 60 * 1000, // 5 minutes
     queryFn: async () => {
       try {
         console.log("Fetching auth user...");
-        const response = await fetch("/api/auth/user", {
+        const response = await fetch("/api/user", {
           credentials: "include",
           headers: {
             "Content-Type": "application/json",
