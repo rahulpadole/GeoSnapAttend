@@ -6,14 +6,40 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { signInWithPopup } from "firebase/auth";
+import { auth, googleProvider } from "@/lib/firebase";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
+  const googleLoginMutation = useMutation({
+    mutationFn: async () => {
+      const result = await signInWithPopup(auth, googleProvider);
+      const idToken = await result.user.getIdToken();
+      
+      // Send the ID token to your backend for verification and session creation
+      const response = await apiRequest("POST", "/api/auth/firebase-google", { 
+        idToken 
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      window.location.href = "/";
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Google Sign-In Failed",
+        description: error.message || "Please try again",
+        variant: "destructive"
+      });
+    }
+  });
+
   const handleGoogleLogin = () => {
-    window.location.href = "/api/auth/google";
+    googleLoginMutation.mutate();
   };
 
   const devLoginMutation = useMutation({
@@ -112,6 +138,7 @@ export default function Login() {
 
             <Button 
               onClick={handleGoogleLogin}
+              disabled={googleLoginMutation.isPending}
               className="w-full bg-primary hover:bg-primary/90 text-white py-4 text-lg"
               data-testid="button-oauth-login"
             >
@@ -133,7 +160,7 @@ export default function Login() {
                   d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                 />
               </svg>
-              Continue with Google
+              {googleLoginMutation.isPending ? "Signing in..." : "Continue with Google"}
             </Button>
 
             <div className="mt-6 text-center text-xs text-neutral">

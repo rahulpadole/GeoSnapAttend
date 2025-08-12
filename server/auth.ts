@@ -5,10 +5,10 @@ import { Express } from "express";
 import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
-import { storage } from "./firebase-storage";
-import { User as SelectUser } from "@shared/firebase-schema";
-import { FirebaseSessionStore } from "./firebase-session-store";
-import { sendEmail, generatePasswordResetEmail } from "./email";
+import { storage } from "./firebase-storage.js";
+import { auth } from "./firebase.js";
+import { randomBytes } from "crypto";
+import { sendPasswordResetEmail } from "./email.js";
 
 declare global {
   namespace Express {
@@ -66,7 +66,7 @@ export function setupAuth(app: Express) {
           console.log('Local strategy - login attempt for:', email);
           const user = await storage.getUserByEmail(email);
           console.log('User found:', user ? 'yes' : 'no');
-          
+
           if (!user || !user.isActive) {
             console.log('User not found or inactive');
             return done(null, false, { message: "Invalid email or password" });
@@ -80,7 +80,7 @@ export function setupAuth(app: Express) {
           console.log('Comparing passwords...');
           const isValid = await comparePasswords(password, user.password);
           console.log('Password valid:', isValid);
-          
+
           if (!isValid) {
             return done(null, false, { message: "Invalid email or password" });
           }
@@ -113,7 +113,7 @@ export function setupAuth(app: Express) {
 
             // Check if user exists
             let user = await storage.getUserByEmail(email);
-            
+
             if (user) {
               // Update Google ID if not set
               if (!user.googleId) {
@@ -270,7 +270,7 @@ export function setupAuth(app: Express) {
   app.post("/api/forgot-password", async (req, res) => {
     try {
       const { email } = req.body;
-      
+
       const user = await storage.getUserByEmail(email);
       if (!user) {
         // Don't reveal if user exists for security
@@ -291,7 +291,7 @@ export function setupAuth(app: Express) {
       // Send email
       const resetLink = `${req.protocol}://${req.get('host')}/reset-password?token=${resetToken}`;
       const emailContent = generatePasswordResetEmail(resetLink, user.firstName || 'User');
-      
+
       const emailSent = await sendEmail({
         to: email,
         from: process.env.FROM_EMAIL || 'noreply@attendancetracker.com',
@@ -349,7 +349,7 @@ export function setupAuth(app: Express) {
       user: req.user ? 'exists' : 'none',
       session: req.session ? 'exists' : 'none'
     });
-    
+
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: "Unauthorized" });
     }

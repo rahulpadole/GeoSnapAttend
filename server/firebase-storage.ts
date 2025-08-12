@@ -20,13 +20,13 @@ export interface IStorage {
   upsertUser(user: InsertUser): Promise<User>;
   getAllUsers(): Promise<User[]>;
   updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
-  
+
   // Employee invitation operations
   createEmployeeInvitation(invitation: InsertEmployeeInvitation): Promise<EmployeeInvitation>;
   getEmployeeInvitations(): Promise<EmployeeInvitation[]>;
   getEmployeeInvitationByEmail(email: string): Promise<EmployeeInvitation | undefined>;
   deleteEmployeeInvitation(id: string): Promise<void>;
-  
+
   // Attendance operations
   createAttendanceRecord(record: InsertAttendanceRecord): Promise<AttendanceRecord>;
   updateAttendanceRecord(id: string, record: Partial<AttendanceRecord>): Promise<AttendanceRecord | undefined>;
@@ -35,16 +35,16 @@ export interface IStorage {
   getAllAttendanceRecords(): Promise<AttendanceRecord[]>;
   getTodayAttendanceRecord(userId: string): Promise<AttendanceRecord | undefined>;
   getAttendanceByDateRange(startDate: Date, endDate: Date): Promise<AttendanceRecord[]>;
-  
+
   // Work location operations
   getWorkLocations(): Promise<WorkLocation[]>;
   createWorkLocation(location: InsertWorkLocation): Promise<WorkLocation>;
-  
+
   // Password reset operations
   createPasswordResetToken(token: InsertPasswordResetToken): Promise<PasswordResetToken>;
   getPasswordResetToken(token: string): Promise<PasswordResetToken | undefined>;
   markPasswordResetTokenAsUsed(id: string): Promise<void>;
-  
+
   // Admin statistics
   getAttendanceStats(): Promise<{
     totalEmployees: number;
@@ -60,7 +60,7 @@ export class FirebaseStorage implements IStorage {
     try {
       const doc = await db.collection(COLLECTIONS.USERS).doc(id).get();
       if (!doc.exists) return undefined;
-      
+
       const data = doc.data();
       return {
         id: doc.id,
@@ -81,9 +81,9 @@ export class FirebaseStorage implements IStorage {
         .where('email', '==', email)
         .limit(1)
         .get();
-      
+
       if (snapshot.empty) return undefined;
-      
+
       const doc = snapshot.docs[0];
       const data = doc.data();
       return {
@@ -103,7 +103,7 @@ export class FirebaseStorage implements IStorage {
     try {
       const now = new Date();
       const id = nanoid();
-      
+
       const userWithTimestamps = {
         ...userData,
         createdAt: now,
@@ -112,7 +112,7 @@ export class FirebaseStorage implements IStorage {
       };
 
       await db.collection(COLLECTIONS.USERS).doc(id).set(userWithTimestamps);
-      
+
       return {
         id,
         ...userWithTimestamps,
@@ -148,7 +148,7 @@ export class FirebaseStorage implements IStorage {
         ...updates,
         updatedAt: new Date(),
       };
-      
+
       await db.collection(COLLECTIONS.USERS).doc(id).update(updateData);
       return await this.getUser(id);
     } catch (error) {
@@ -163,7 +163,7 @@ export class FirebaseStorage implements IStorage {
       const id = nanoid();
       const now = new Date();
       const expiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days
-      
+
       const invitationData = {
         ...invitation,
         createdAt: now,
@@ -171,7 +171,7 @@ export class FirebaseStorage implements IStorage {
       };
 
       await db.collection(COLLECTIONS.EMPLOYEE_INVITATIONS).doc(id).set(invitationData);
-      
+
       return {
         id,
         ...invitationData,
@@ -207,9 +207,9 @@ export class FirebaseStorage implements IStorage {
         .where('email', '==', email)
         .limit(1)
         .get();
-      
+
       if (snapshot.empty) return undefined;
-      
+
       const doc = snapshot.docs[0];
       const data = doc.data();
       return {
@@ -238,7 +238,7 @@ export class FirebaseStorage implements IStorage {
     try {
       const id = nanoid();
       const now = new Date();
-      
+
       const recordData = {
         ...record,
         createdAt: now,
@@ -247,7 +247,7 @@ export class FirebaseStorage implements IStorage {
       };
 
       await db.collection(COLLECTIONS.ATTENDANCE_RECORDS).doc(id).set(recordData);
-      
+
       return {
         id,
         ...recordData,
@@ -264,7 +264,7 @@ export class FirebaseStorage implements IStorage {
         ...record,
         updatedAt: new Date(),
       };
-      
+
       await db.collection(COLLECTIONS.ATTENDANCE_RECORDS).doc(id).update(updateData);
       return await this.getAttendanceRecordById(id);
     } catch (error) {
@@ -277,7 +277,7 @@ export class FirebaseStorage implements IStorage {
     try {
       const doc = await db.collection(COLLECTIONS.ATTENDANCE_RECORDS).doc(id).get();
       if (!doc.exists) return undefined;
-      
+
       const data = doc.data();
       return {
         id: doc.id,
@@ -299,11 +299,11 @@ export class FirebaseStorage implements IStorage {
       let query = db.collection(COLLECTIONS.ATTENDANCE_RECORDS)
         .where('userId', '==', userId)
         .orderBy('date', 'desc');
-      
+
       if (limit) {
         query = query.limit(limit);
       }
-      
+
       const snapshot = await query.get();
       return snapshot.docs.map(doc => {
         const data = doc.data();
@@ -328,7 +328,7 @@ export class FirebaseStorage implements IStorage {
       const snapshot = await db.collection(COLLECTIONS.ATTENDANCE_RECORDS)
         .orderBy('date', 'desc')
         .get();
-      
+
       return snapshot.docs.map(doc => {
         const data = doc.data();
         return {
@@ -353,16 +353,16 @@ export class FirebaseStorage implements IStorage {
       today.setHours(0, 0, 0, 0);
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
-      
+
       const snapshot = await db.collection(COLLECTIONS.ATTENDANCE_RECORDS)
         .where('userId', '==', userId)
         .where('date', '>=', today)
         .where('date', '<', tomorrow)
         .limit(1)
         .get();
-      
+
       if (snapshot.empty) return undefined;
-      
+
       const doc = snapshot.docs[0];
       const data = doc.data();
       return {
@@ -387,7 +387,7 @@ export class FirebaseStorage implements IStorage {
         .where('date', '<=', endDate)
         .orderBy('date', 'desc')
         .get();
-      
+
       return snapshot.docs.map(doc => {
         const data = doc.data();
         return {
@@ -412,7 +412,7 @@ export class FirebaseStorage implements IStorage {
       const snapshot = await db.collection(COLLECTIONS.WORK_LOCATIONS)
         .where('isActive', '==', true)
         .get();
-      
+
       return snapshot.docs.map(doc => {
         const data = doc.data();
         return {
@@ -431,14 +431,14 @@ export class FirebaseStorage implements IStorage {
     try {
       const id = nanoid();
       const now = new Date();
-      
+
       const locationData = {
         ...location,
         createdAt: now,
       };
 
       await db.collection(COLLECTIONS.WORK_LOCATIONS).doc(id).set(locationData);
-      
+
       return {
         id,
         ...locationData,
@@ -454,14 +454,14 @@ export class FirebaseStorage implements IStorage {
     try {
       const id = nanoid();
       const now = new Date();
-      
+
       const tokenData = {
         ...token,
         createdAt: now,
       };
 
       await db.collection(COLLECTIONS.PASSWORD_RESET_TOKENS).doc(id).set(tokenData);
-      
+
       return {
         id,
         ...tokenData,
@@ -479,9 +479,9 @@ export class FirebaseStorage implements IStorage {
         .where('used', '==', false)
         .limit(1)
         .get();
-      
+
       if (snapshot.empty) return undefined;
-      
+
       const doc = snapshot.docs[0];
       const data = doc.data();
       return {
@@ -531,13 +531,13 @@ export class FirebaseStorage implements IStorage {
         .where('date', '>=', today)
         .where('date', '<', tomorrow)
         .get();
-      
+
       const presentToday = attendanceSnapshot.size;
       const lateArrivals = attendanceSnapshot.docs.filter(doc => {
         const data = doc.data();
         const checkInTime = data?.checkInTime?.toDate();
         if (!checkInTime) return false;
-        
+
         // Consider late if check-in after 9 AM
         const nineAM = new Date(checkInTime);
         nineAM.setHours(9, 0, 0, 0);
