@@ -7,7 +7,6 @@ import { useAuth } from "@/hooks/useAuth";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import AuthPage from "@/pages/auth-page";
-import Login from "@/pages/login";
 import ResetPasswordPage from "@/pages/reset-password";
 import Profile from "@/pages/profile";
 import EmployeeDashboard from "@/pages/employee-dashboard";
@@ -15,8 +14,6 @@ import AdminDashboard from "@/pages/admin-dashboard";
 
 function Router() {
   const { isAuthenticated, isLoading, user } = useAuth();
-
-  console.log('Router state:', { isAuthenticated, isLoading, user: user ? 'exists' : 'null' });
 
   if (isLoading) {
     return (
@@ -30,15 +27,14 @@ function Router() {
     <Switch>
       {!isAuthenticated ? (
         <>
-          <Route path="/" component={Login} />
+          <Route path="/" component={AuthPage} />
           <Route path="/auth" component={AuthPage} />
-          <Route path="/login" component={Login} />
           <Route path="/reset-password" component={ResetPasswordPage} />
           <Route path="/landing" component={Landing} />
         </>
       ) : (
         <>
-          <Route path="/" exact>
+          <Route path="/">
             {user?.role === 'admin' ? <AdminDashboard /> : <EmployeeDashboard />}
           </Route>
           <Route path="/profile" component={Profile} />
