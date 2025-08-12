@@ -3,6 +3,7 @@ import {
   employeeInvitations,
   attendanceRecords,
   workLocations,
+  passwordResetTokens,
   type User,
   type UpsertUser,
   type EmployeeInvitation,
@@ -11,6 +12,8 @@ import {
   type InsertAttendanceRecord,
   type WorkLocation,
   type InsertWorkLocation,
+  type PasswordResetToken,
+  type InsertPasswordResetTokenType,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, gte, lte, sql } from "drizzle-orm";
@@ -41,6 +44,11 @@ export interface IStorage {
   // Work location operations
   getWorkLocations(): Promise<WorkLocation[]>;
   createWorkLocation(location: InsertWorkLocation): Promise<WorkLocation>;
+  
+  // Password reset operations
+  createPasswordResetToken(token: InsertPasswordResetTokenType): Promise<PasswordResetToken>;
+  getPasswordResetToken(token: string): Promise<PasswordResetToken | undefined>;
+  markPasswordResetTokenAsUsed(id: string): Promise<void>;
   
   // Admin statistics
   getAttendanceStats(): Promise<{
@@ -254,6 +262,27 @@ export class DatabaseStorage implements IStorage {
       lateArrivals,
       absent: Number(totalEmployees[0]?.count || 0) - presentToday,
     };
+  }
+
+  // Password reset operations
+  async createPasswordResetToken(tokenData: InsertPasswordResetTokenType): Promise<PasswordResetToken> {
+    const result = await db.insert(passwordResetTokens).values(tokenData).returning();
+    return result[0];
+  }
+
+  async getPasswordResetToken(token: string): Promise<PasswordResetToken | undefined> {
+    const result = await db
+      .select()
+      .from(passwordResetTokens)
+      .where(eq(passwordResetTokens.token, token))
+      .limit(1);
+    return result[0];
+  }
+
+  async markPasswordResetTokenAsUsed(id: string): Promise<void> {
+    await db.update(passwordResetTokens)
+      .set({ used: true })
+      .where(eq(passwordResetTokens.id, id));
   }
 }
 

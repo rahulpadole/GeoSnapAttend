@@ -28,7 +28,8 @@ export const sessions = pgTable(
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   email: varchar("email").unique().notNull(),
-  password: varchar("password").notNull(),
+  password: varchar("password"),
+  googleId: varchar("google_id").unique(),
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
@@ -40,6 +41,16 @@ export const users = pgTable("users", {
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Password reset tokens table
+export const passwordResetTokens = pgTable("password_reset_tokens", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  token: varchar("token").notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(),
+  used: boolean("used").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 // Employee invitations table for pre-registering employees
@@ -103,6 +114,9 @@ export type AttendanceRecord = typeof attendanceRecords.$inferSelect;
 export type InsertWorkLocation = typeof workLocations.$inferInsert;
 export type WorkLocation = typeof workLocations.$inferSelect;
 
+export type InsertPasswordResetToken = typeof passwordResetTokens.$inferInsert;
+export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
+
 // Zod schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -127,7 +141,13 @@ export const insertWorkLocationSchema = createInsertSchema(workLocations).omit({
   createdAt: true,
 });
 
+export const insertPasswordResetTokenSchema = createInsertSchema(passwordResetTokens).omit({
+  id: true,
+  createdAt: true,
+});
+
 export type InsertUserType = z.infer<typeof insertUserSchema>;
 export type InsertEmployeeInvitationType = z.infer<typeof insertEmployeeInvitationSchema>;
 export type InsertAttendanceRecordType = z.infer<typeof insertAttendanceRecordSchema>;
 export type InsertWorkLocationType = z.infer<typeof insertWorkLocationSchema>;
+export type InsertPasswordResetTokenType = z.infer<typeof insertPasswordResetTokenSchema>;

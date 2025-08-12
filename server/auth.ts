@@ -1,5 +1,6 @@
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
+import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import { Express } from "express";
 import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
@@ -7,6 +8,7 @@ import { promisify } from "util";
 import { storage } from "./storage";
 import { User as SelectUser } from "@shared/schema";
 import connectPg from "connect-pg-simple";
+import { sendEmail, generatePasswordResetEmail } from "./email";
 
 declare global {
   namespace Express {
@@ -68,6 +70,10 @@ export function setupAuth(app: Express) {
             return done(null, false, { message: "Invalid email or password" });
           }
 
+          if (!user.password) {
+            return done(null, false, { message: "Please use Google login or reset your password" });
+          }
+
           const isValid = await comparePasswords(password, user.password);
           if (!isValid) {
             return done(null, false, { message: "Invalid email or password" });
@@ -80,6 +86,65 @@ export function setupAuth(app: Express) {
       }
     )
   );
+
+  // Google OAuth strategy
+  if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+    passport.use(
+      new GoogleStrategy(
+        {
+          clientID: process.env.GOOGLE_CLIENT_ID,
+          clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+          callbackURL: "/api/auth/google/callback",
+        },
+        async (accessToken, refreshToken, profile, done) => {
+          try {
+            const email = profile.emails?.[0]?.value;
+            if (!email) {
+              return done(null, false, { message: "No email provided by Google" });
+            }
+
+            // Check if user exists
+            let user = await storage.getUserByEmail(email);
+            
+            if (user) {
+              // Update Google ID if not set
+              if (!user.googleId) {
+                user = await storage.updateUser(user.id, { googleId: profile.id }) || user;
+              }
+            } else {
+              // Check if there's an employee invitation for this email
+              const invitation = await storage.getEmployeeInvitationByEmail(email);
+              if (!invitation) {
+                return done(null, false, { message: "No invitation found for this email address" });
+              }
+
+              // Create new user with Google OAuth
+              user = await storage.upsertUser({
+                email,
+                googleId: profile.id,
+                firstName: profile.name?.givenName || "",
+                lastName: profile.name?.familyName || "",
+                profileImageUrl: profile.photos?.[0]?.value,
+                role: invitation.role,
+                department: invitation.department,
+                position: invitation.position,
+                phone: invitation.phone,
+                hireDate: invitation.hireDate,
+                isActive: true,
+              });
+
+              // Remove the invitation
+              await storage.deleteEmployeeInvitation(invitation.id);
+            }
+
+            return done(null, user);
+          } catch (error) {
+            return done(error);
+          }
+        }
+      )
+    );
+  }
 
   passport.serializeUser((user, done) => done(null, user.id));
   passport.deserializeUser(async (id: string, done) => {
@@ -173,6 +238,95 @@ export function setupAuth(app: Express) {
         res.json({ message: "Logged out successfully" });
       });
     });
+  });
+
+  // Google OAuth routes
+  if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+    app.get("/api/auth/google", passport.authenticate("google", { scope: ["profile", "email"] }));
+
+    app.get("/api/auth/google/callback", 
+      passport.authenticate("google", { failureRedirect: "/auth?error=google_auth_failed" }),
+      (req, res) => {
+        // Successful authentication, redirect to dashboard
+        const user = req.user as any;
+        res.redirect(user.role === 'admin' ? '/admin' : '/employee');
+      }
+    );
+  }
+
+  // Password reset request
+  app.post("/api/forgot-password", async (req, res) => {
+    try {
+      const { email } = req.body;
+      
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        // Don't reveal if user exists for security
+        return res.json({ message: "If this email exists, you will receive a password reset link." });
+      }
+
+      // Generate reset token
+      const resetToken = randomBytes(32).toString('hex');
+      const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour from now
+
+      await storage.createPasswordResetToken({
+        userId: user.id,
+        token: resetToken,
+        expiresAt,
+        used: false,
+      });
+
+      // Send email
+      const resetLink = `${req.protocol}://${req.get('host')}/reset-password?token=${resetToken}`;
+      const emailContent = generatePasswordResetEmail(resetLink, user.firstName || 'User');
+      
+      const emailSent = await sendEmail({
+        to: email,
+        from: process.env.FROM_EMAIL || 'noreply@attendancetracker.com',
+        subject: 'Reset Your AttendanceTracker Pro Password',
+        ...emailContent,
+      });
+
+      if (!emailSent) {
+        return res.status(500).json({ message: "Failed to send reset email" });
+      }
+
+      res.json({ message: "If this email exists, you will receive a password reset link." });
+    } catch (error) {
+      console.error("Password reset error:", error);
+      res.status(500).json({ message: "Failed to process password reset request" });
+    }
+  });
+
+  // Password reset form
+  app.post("/api/reset-password", async (req, res) => {
+    try {
+      const { token, newPassword } = req.body;
+
+      if (!token || !newPassword) {
+        return res.status(400).json({ message: "Token and new password are required" });
+      }
+
+      // Find and validate token
+      const resetToken = await storage.getPasswordResetToken(token);
+      if (!resetToken || resetToken.used || new Date() > resetToken.expiresAt) {
+        return res.status(400).json({ message: "Invalid or expired reset token" });
+      }
+
+      // Hash new password
+      const hashedPassword = await hashPassword(newPassword);
+
+      // Update user password
+      await storage.updateUser(resetToken.userId, { password: hashedPassword });
+
+      // Mark token as used
+      await storage.markPasswordResetTokenAsUsed(resetToken.id);
+
+      res.json({ message: "Password reset successful" });
+    } catch (error) {
+      console.error("Password reset error:", error);
+      res.status(500).json({ message: "Failed to reset password" });
+    }
   });
 
   // Get current user route
