@@ -11,6 +11,7 @@ export function useAuth() {
       try {
         console.log("Fetching auth user...");
         const response = await fetch("/api/user", {
+          method: "GET",
           credentials: "include",
           headers: {
             "Content-Type": "application/json",
@@ -32,7 +33,7 @@ export function useAuth() {
         return userData;
       } catch (error) {
         console.error("Auth fetch error:", error);
-        throw error;
+        return null; // Return null instead of throwing to prevent error state
       }
     },
   });

@@ -44,7 +44,7 @@ export default function Login() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
       window.location.href = "/";
     },
     onError: (error: any) => {
@@ -67,7 +67,7 @@ export default function Login() {
     },
     onSuccess: () => {
       // Invalidate auth query to refresh user state
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
       window.location.href = "/";
     },
     onError: (error: any) => {
